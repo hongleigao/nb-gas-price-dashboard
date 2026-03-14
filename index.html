@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gas Price Comparison (NB vs NYMEX RBOB)</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f8f9fa; }
+        .container { background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 20px; max-width: 1200px; margin: 0 auto; }
+        #chart { width: 100%; height: 600px; }
+        h1 { text-align: center; color: #333; font-size: 24px; margin-bottom: 5px; }
+        p { text-align: center; color: #666; font-size: 14px; margin-top: 0; }
+        #loading { text-align: center; color: #888; font-size: 16px; margin: 50px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>NB Announced Reg Gas Price vs NYMEX RBOB Trend</h1>
+        <p id="date-range">Loading data...</p>
+        <div id="loading">Fetching latest gas price data...</div>
+        <div id="chart" style="display:none;"></div>
+    </div>
+
+    <script>
+        var chartDom = document.getElementById('chart');
+        var loadingDom = document.getElementById('loading');
+        var myChart = echarts.init(chartDom);
+
+        // 异步获取 GitHub Actions 生成的 data.json
+        fetch('data.json')
+            .then(response => {
+                if (!response.ok) throw new Error('Data not found');
+                return response.json();
+            })
+            .then(data => {
+                // 隐藏加载提示，显示图表
+                loadingDom.style.display = 'none';
+                chartDom.style.display = 'block';
+                myChart.resize();
+
+                // 更新副标题的日期范围
+                if (data.dates.length > 0) {
+                    const firstDate = data.dates[0];
+                    const lastDate = data.dates[data.dates.length - 1];
+                    document.getElementById('date-range').innerText = `Data Range: ${firstDate} to ${lastDate}`;
+                }
+
+                // 渲染 ECharts
+                var option = {
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: { type: 'cross', label: { backgroundColor: '#6a7985' } },
+                        valueFormatter: (value) => (value !== undefined && value !== null ? value.toFixed(1) + ' ¢/L' : '-')
+                    },
+                    legend: { data: ['NB Announced Reg Gas Price', 'NYMEX RBOB (CAD)'], top: '5%' },
+                    grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
+                    toolbox: {
+                        feature: {
+                            dataZoom: { title: { zoom: 'Zoom', back: 'Reset Zoom' } },
+                            saveAsImage: { title: 'Save as Image' }
+                        }
+                    },
+                    xAxis: {
+                        type: 'category',
+                        boundaryGap: false,
+                        data: data.dates // 动态注入日期
+                    },
+                    yAxis: { type: 'value', name: 'CAD Cents/L', scale: true },
+                    dataZoom: [ { type: 'inside', start: 70, end: 100 }, { start: 70, end: 100 } ],
+                    series: [
+                        {
+                            name: 'NB Announced Reg Gas Price',
+                            type: 'line', smooth: true, symbol: 'none',
+                            lineStyle: { width: 2, color: '#d94e5d' }, itemStyle: { color: '#d94e5d' },
+                            data: data.nb_prices // 动态注入 NB 价格
+                        },
+                        {
+                            name: 'NYMEX RBOB (CAD)',
+                            type: 'line', smooth: true, symbol: 'none',
+                            lineStyle: { width: 2, color: '#2f4554' }, itemStyle: { color: '#2f4554' },
+                            data: data.nymex_prices // 动态注入转换后的 RBOB 价格
+                        }
+                    ]
+                };
+                myChart.setOption(option);
+            })
+            .catch(error => {
+                loadingDom.innerText = "Error loading data. The GitHub Action might still be generating the initial data.json file.";
+                console.error("Error fetching data:", error);
+            });
+        
+        window.addEventListener('resize', function() { myChart.resize(); });
+    </script>
+</body>
+</html>
