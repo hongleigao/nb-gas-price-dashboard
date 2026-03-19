@@ -43,7 +43,6 @@
         .card-value { font-size: 30px; font-weight: 800; color: var(--text-main); }
         .card-delta { font-size: 14px; margin-top: 6px; font-weight: 600; }
         
-        /* P2-Core: Prediction Specific */
         .card-prediction { border-top: 4px solid #3498db; background: rgba(52, 152, 219, 0.05); }
         .pred-up { color: #d94e5d; }
         .pred-down { color: #2ecc71; }
@@ -63,27 +62,10 @@
         /* Tooltip Styling */
         .tooltip { position: relative; display: inline-block; cursor: help; margin-left: 5px; }
         .tooltip .tooltiptext {
-            visibility: hidden;
-            width: 250px;
-            background-color: var(--card-bg);
-            color: var(--text-main);
-            text-align: left;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 12px;
-            position: absolute;
-            z-index: 100;
-            bottom: 125%;
-            left: 50%;
-            margin-left: -125px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            font-size: 12px;
-            line-height: 1.4;
-            font-weight: normal;
-            text-transform: none;
-            letter-spacing: normal;
+            visibility: hidden; width: 250px; background-color: var(--card-bg); color: var(--text-main); text-align: left;
+            border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; position: absolute; z-index: 100;
+            bottom: 125%; left: 50%; margin-left: -125px; opacity: 0; transition: opacity 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            font-size: 12px; line-height: 1.4; font-weight: normal; text-transform: none; letter-spacing: normal;
         }
         .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
         .tooltip-header { font-weight: bold; margin-bottom: 5px; color: #3498db; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
@@ -122,7 +104,7 @@
             <div class="card">
                 <div class="card-label">Retail Spread</div>
                 <div id="spread-val" class="card-value">--</div>
-                <div id="spread-percentile" class="card-delta" style="color:var(--text-sub);">--</div>
+                <div id="spread-vs-avg" class="card-delta">--</div>
             </div>
         </div>
 
@@ -136,18 +118,14 @@
     </div>
 
     <script>
-        // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW Registered'))
-                    .catch(err => console.error('SW Reg Failed', err));
+                navigator.serviceWorker.register('./sw.js').then(reg => console.log('SW Registered')).catch(err => console.error(err));
             });
         }
 
         var chartDom = document.getElementById('chart');
         var loadingDom = document.getElementById('loading');
-        
         const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         var myChart = echarts.init(chartDom, isDarkMode ? 'dark' : null);
         if (isDarkMode) chartDom.style.backgroundColor = 'transparent';
@@ -158,11 +136,10 @@
             return `<span class="delta-neutral">-- 0.0</span>`;
         }
 
-        function formatPrediction(change, dir) {
-            const absChange = Math.abs(change).toFixed(1);
-            if (dir === 'up') return `<span class="pred-up">Expected Up ~${absChange} ¢</span>`;
-            if (dir === 'down') return `<span class="pred-down">Expected Down ~${absChange} ¢</span>`;
-            return `<span class="pred-stable">Expected Stable</span>`;
+        function formatSpreadDelta(val) {
+            if (val > 0.5) return `<span class="delta-up">▲ +${val.toFixed(1)} (Thick Margin)</span>`;
+            if (val < -0.5) return `<span class="delta-down">▼ ${val.toFixed(1)} (Thin Margin)</span>`;
+            return `<span class="delta-neutral">-- Stable Margin</span>`;
         }
 
         fetch('data.json')
@@ -180,13 +157,13 @@
                     document.getElementById('nymex-delta').innerHTML = formatDelta(data.metadata.nymex_delta);
                     document.getElementById('spread-val').innerText = data.metadata.current_spread.toFixed(1) + " ¢";
                     
-                    // P3: Historical Market Context
-                    const pct = data.metadata.spread_percentile;
-                    document.getElementById('spread-percentile').innerText = `Higher than ${pct}% of history`;
+                    // P3: Retail Spread vs 4W Average
+                    document.getElementById('spread-vs-avg').innerHTML = formatSpreadDelta(data.metadata.spread_vs_avg);
                     
                     const pred = data.metadata.prediction;
+                    const absChange = Math.abs(pred.change).toFixed(1);
                     document.getElementById('pred-val').innerText = (pred.direction === 'stable' ? '--' : (pred.change > 0 ? '+' : '') + pred.change + " ¢");
-                    document.getElementById('pred-direction').innerHTML = formatPrediction(pred.change, pred.direction);
+                    document.getElementById('pred-direction').innerHTML = pred.direction === 'up' ? `<span class="pred-up">Expected Up ~${absChange} ¢</span>` : (pred.direction === 'down' ? `<span class="pred-down">Expected Down ~${absChange} ¢</span>` : `<span class="pred-stable">Expected Stable</span>`);
 
                     const statusBar = document.getElementById('status-bar');
                     statusBar.style.display = 'block';
@@ -203,10 +180,7 @@
 
                 var option = {
                     backgroundColor: 'transparent',
-                    tooltip: {
-                        trigger: 'axis',
-                        axisPointer: { type: 'cross' }
-                    },
+                    tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
                     legend: { data: ['NB Price', 'NYMEX RBOB', 'Retail Spread'], top: '0%', textStyle: { color: isDarkMode ? '#aaa' : '#333' } },
                     grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
                     xAxis: { type: 'category', boundaryGap: false, data: data.dates },
@@ -216,36 +190,14 @@
                     ],
                     dataZoom: [{ type: 'inside', start: 85, end: 100 }, { start: 85, end: 100 }],
                     series: [
-                        {
-                            name: 'NB Price',
-                            type: 'line', smooth: true, symbol: 'none',
-                            lineStyle: { width: 4, color: '#d94e5d' }, itemStyle: { color: '#d94e5d' },
-                            data: data.nb_prices,
-                            markPoint: { symbol: 'circle', data: markPoints }
-                        },
-                        {
-                            name: 'NYMEX RBOB',
-                            type: 'line', smooth: true, symbol: 'none',
-                            lineStyle: { width: 2, color: '#3498db', opacity: 0.7 }, itemStyle: { color: '#3498db' },
-                            data: data.nymex_prices
-                        },
-                        {
-                            name: 'Retail Spread',
-                            type: 'line', smooth: true, yAxisIndex: 1, symbol: 'none',
-                            areaStyle: { opacity: 0.15, color: '#f39c12' },
-                            lineStyle: { width: 1, color: '#f39c12', type: 'dashed' },
-                            itemStyle: { color: '#f39c12' },
-                            data: data.spreads
-                        }
+                        { name: 'NB Price', type: 'line', smooth: true, symbol: 'none', lineStyle: { width: 4, color: '#d94e5d' }, itemStyle: { color: '#d94e5d' }, data: data.nb_prices, markPoint: { symbol: 'circle', data: markPoints } },
+                        { name: 'NYMEX RBOB', type: 'line', smooth: true, symbol: 'none', lineStyle: { width: 2, color: '#3498db', opacity: 0.7 }, itemStyle: { color: '#3498db' }, data: data.nymex_prices },
+                        { name: 'Retail Spread', type: 'line', smooth: true, yAxisIndex: 1, symbol: 'none', areaStyle: { opacity: 0.15, color: '#f39c12' }, lineStyle: { width: 1, color: '#f39c12', type: 'dashed' }, itemStyle: { color: '#f39c12' }, data: data.spreads }
                     ]
                 };
                 myChart.setOption(option);
             })
-            .catch(error => {
-                loadingDom.innerText = "Error loading data. The GitHub Action might still be generating the initial data.json file.";
-                console.error("Error fetching data:", error);
-            });
-        
+            .catch(error => console.error("Error:", error));
         window.addEventListener('resize', function() { myChart.resize(); });
     </script>
 </body>
