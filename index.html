@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gas Price Comparison (NB vs NYMEX RBOB)</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#d94e5d">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --container-bg: #ffffff;
+            --text-main: #333333;
+            --text-sub: #666666;
+            --border-color: #eeeeee;
+            --card-bg: #ffffff;
+            --status-bg: #fcfcfc;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #121212;
+                --container-bg: #1e1e1e;
+                --text-main: #e0e0e0;
+                --text-sub: #aaaaaa;
+                --border-color: #333333;
+                --card-bg: #2d2d2d;
+                --status-bg: #252525;
+            }
+        }
+        body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-main); transition: all 0.3s ease; }
+        .container { background: var(--container-bg); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); padding: 25px; max-width: 1200px; margin: 0 auto; }
+        #chart { width: 100%; height: 550px; margin-top: 20px; }
+        h1 { text-align: center; color: var(--text-main); font-size: 26px; margin-bottom: 20px; font-weight: 700; }
+        #loading { text-align: center; color: var(--text-sub); font-size: 16px; margin: 50px 0; }
+        
+        /* P0: Value Cards Styling */
+        .cards-container { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+        .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; flex: 1; min-width: 220px; text-align: center; transition: transform 0.2s ease; }
+        .card:hover { transform: translateY(-3px); }
+        .card-label { font-size: 11px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px; font-weight: 600; }
+        .card-value { font-size: 30px; font-weight: 800; color: var(--text-main); }
+        .card-delta { font-size: 14px; margin-top: 6px; font-weight: 600; }
+        
+        /* P2-Core: Prediction Specific */
+        .card-prediction { border-top: 4px solid #3498db; background: rgba(52, 152, 219, 0.05); }
+        .pred-up { color: #d94e5d; }
+        .pred-down { color: #2ecc71; }
+        .pred-stable { color: #95a5a6; }
+
+        .delta-up { color: #d94e5d; }
+        .delta-down { color: #2ecc71; }
+        .delta-neutral { color: #95a5a6; }
+
+        #status-bar { text-align: center; margin-bottom: 20px; font-size: 12px; padding: 10px; background: var(--status-bg); border-radius: 8px; display: none; border: 1px solid var(--border-color); color: var(--text-sub); }
+        
+        @media (max-width: 768px) {
+            .container { padding: 15px; }
+            #chart { height: 400px; }
+            .card-value { font-size: 24px; }
+        }
+        /* Tooltip Styling */
+        .tooltip { position: relative; display: inline-block; cursor: help; margin-left: 5px; }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 250px;
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            text-align: left;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            position: absolute;
+            z-index: 100;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -125px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            font-size: 12px;
+            line-height: 1.4;
+            font-weight: normal;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+        .tooltip-header { font-weight: bold; margin-bottom: 5px; color: #3498db; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+        .disclaimer { font-size: 10px; color: #888; margin-top: 8px; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gas Price Tracker</h1>
+        
+        <div id="cards" class="cards-container" style="display:none;">
+            <div class="card">
+                <div class="card-label">NB Reg Gas Price</div>
+                <div id="nb-val" class="card-value">--</div>
+                <div id="nb-delta" class="card-delta">--</div>
+            </div>
+            <div class="card">
+                <div class="card-label">NYMEX RBOB (CAD)</div>
+                <div id="nymex-val" class="card-value">--</div>
+                <div id="nymex-delta" class="card-delta">--</div>
+            </div>
+            <div class="card card-prediction">
+                <div class="card-label">
+                    Weekly Forecast (Thu)
+                    <span class="tooltip">ⓘ
+                        <span class="tooltiptext">
+                            <div class="tooltip-header">Forecast Logic</div>
+                            NB prices are set based on the average benchmark price from Wednesday to Tuesday. This forecast compares the current cycle's average to the previous week's.
+                            <div class="disclaimer">Disclaimer: This is an estimate based on market trends and current exchange rates. Actual EUB regulated prices may vary. Use for informational purposes only.</div>
+                        </span>
+                    </span>
+                </div>
+                <div id="pred-val" class="card-value">--</div>
+                <div id="pred-direction" class="card-delta">--</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Retail Spread</div>
+                <div id="spread-val" class="card-value">--</div>
+                <div id="spread-percentile" class="card-delta" style="color:var(--text-sub);">--</div>
+            </div>
+        </div>
+
+        <div id="status-bar">
+            <span id="sync-status"></span> &nbsp; | &nbsp; 
+            <span id="price-status"></span>
+        </div>
+        
+        <div id="loading">Gathering data and calculating insights...</div>
+        <div id="chart" style="display:none;"></div>
+    </div>
+
+    <script>
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW Registered'))
+                    .catch(err => console.error('SW Reg Failed', err));
+            });
+        }
+
+        var chartDom = document.getElementById('chart');
+        var loadingDom = document.getElementById('loading');
+        
+        const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var myChart = echarts.init(chartDom, isDarkMode ? 'dark' : null);
+        if (isDarkMode) chartDom.style.backgroundColor = 'transparent';
+
+        function formatDelta(val) {
+            if (val > 0) return `<span class="delta-up">▲ +${val.toFixed(1)}</span>`;
+            if (val < 0) return `<span class="delta-down">▼ ${val.toFixed(1)}</span>`;
+            return `<span class="delta-neutral">-- 0.0</span>`;
+        }
+
+        function formatPrediction(change, dir) {
+            const absChange = Math.abs(change).toFixed(1);
+            if (dir === 'up') return `<span class="pred-up">Expected Up ~${absChange} ¢</span>`;
+            if (dir === 'down') return `<span class="pred-down">Expected Down ~${absChange} ¢</span>`;
+            return `<span class="pred-stable">Expected Stable</span>`;
+        }
+
+        fetch('data.json')
+            .then(response => response.json())
+            .then(data => {
+                loadingDom.style.display = 'none';
+                chartDom.style.display = 'block';
+                document.getElementById('cards').style.display = 'flex';
+                myChart.resize();
+
+                if (data.metadata) {
+                    document.getElementById('nb-val').innerText = data.metadata.current_nb_price.toFixed(1) + " ¢";
+                    document.getElementById('nb-delta').innerHTML = formatDelta(data.metadata.nb_delta);
+                    document.getElementById('nymex-val').innerText = data.metadata.current_nymex_price.toFixed(1) + " ¢";
+                    document.getElementById('nymex-delta').innerHTML = formatDelta(data.metadata.nymex_delta);
+                    document.getElementById('spread-val').innerText = data.metadata.current_spread.toFixed(1) + " ¢";
+                    
+                    // P3: Historical Market Context
+                    const pct = data.metadata.spread_percentile;
+                    document.getElementById('spread-percentile').innerText = `Higher than ${pct}% of history`;
+                    
+                    const pred = data.metadata.prediction;
+                    document.getElementById('pred-val').innerText = (pred.direction === 'stable' ? '--' : (pred.change > 0 ? '+' : '') + pred.change + " ¢");
+                    document.getElementById('pred-direction').innerHTML = formatPrediction(pred.change, pred.direction);
+
+                    const statusBar = document.getElementById('status-bar');
+                    statusBar.style.display = 'block';
+                    document.getElementById('sync-status').innerHTML = `Sync: ${data.metadata.last_sync}`;
+                    document.getElementById('price-status').innerHTML = `NB Price active since ${data.metadata.nb_last_date}`;
+                }
+
+                const markPoints = [];
+                for (let i = 1; i < data.nb_prices.length; i++) {
+                    if (data.nb_prices[i] !== data.nb_prices[i-1]) {
+                        markPoints.push({ coord: [i, data.nb_prices[i]], symbolSize: 6, itemStyle: { color: '#d94e5d' } });
+                    }
+                }
+
+                var option = {
+                    backgroundColor: 'transparent',
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: { type: 'cross' }
+                    },
+                    legend: { data: ['NB Price', 'NYMEX RBOB', 'Retail Spread'], top: '0%', textStyle: { color: isDarkMode ? '#aaa' : '#333' } },
+                    grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
+                    xAxis: { type: 'category', boundaryGap: false, data: data.dates },
+                    yAxis: [
+                        { type: 'value', name: '¢/L', scale: true, splitLine: { lineStyle: { color: isDarkMode ? '#333' : '#eee' } } },
+                        { type: 'value', name: 'Spread', scale: true, splitLine: { show: false } }
+                    ],
+                    dataZoom: [{ type: 'inside', start: 85, end: 100 }, { start: 85, end: 100 }],
+                    series: [
+                        {
+                            name: 'NB Price',
+                            type: 'line', smooth: true, symbol: 'none',
+                            lineStyle: { width: 4, color: '#d94e5d' }, itemStyle: { color: '#d94e5d' },
+                            data: data.nb_prices,
+                            markPoint: { symbol: 'circle', data: markPoints }
+                        },
+                        {
+                            name: 'NYMEX RBOB',
+                            type: 'line', smooth: true, symbol: 'none',
+                            lineStyle: { width: 2, color: '#3498db', opacity: 0.7 }, itemStyle: { color: '#3498db' },
+                            data: data.nymex_prices
+                        },
+                        {
+                            name: 'Retail Spread',
+                            type: 'line', smooth: true, yAxisIndex: 1, symbol: 'none',
+                            areaStyle: { opacity: 0.15, color: '#f39c12' },
+                            lineStyle: { width: 1, color: '#f39c12', type: 'dashed' },
+                            itemStyle: { color: '#f39c12' },
+                            data: data.spreads
+                        }
+                    ]
+                };
+                myChart.setOption(option);
+            })
+            .catch(error => {
+                loadingDom.innerText = "Error loading data. The GitHub Action might still be generating the initial data.json file.";
+                console.error("Error fetching data:", error);
+            });
+        
+        window.addEventListener('resize', function() { myChart.resize(); });
+    </script>
+</body>
+</html>
