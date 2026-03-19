@@ -1,92 +1,66 @@
-# NB Gas Price Dashboard - 部署与运维指南
+# NB Gas Price Dashboard - 部署与运维全指南
 
-本指南旨在帮助您将更新后的项目发布到 GitHub，并配置自动化运行环境，最终通过 Cloudflare 实现全球极速访问。
+本指南将带您完成从代码提交、自动化配置到 Cloudflare Pages 全球上线的完整流程。本项目采用 **“代码与数据分离”** 架构，确保极致的稳定性和零冲突体验。
 
 ---
 
-## 第一部分：将代码推送到 GitHub
+## 第一部分：GitHub 代码同步 (Standard Workflow)
 
-当您在本地完成修改（例如运行 `python update_data.py` 验证成功后），请执行以下步骤将代码同步到 GitHub。
+当您在本地完成修改并运行 `python update_data.py` 验证成功后，执行以下命令同步到 GitHub：
 
-1.  **打开终端**（PowerShell 或 Git Bash），进入项目根目录。
-2.  **查看状态**：
-    ```bash
-    git status
-    ```
-3.  **暂存更改**：
-    ```bash
+1.  **提交代码**：
+    ```powershell
     git add .
+    git commit -m "Your descriptive message"
     ```
-4.  **提交更改**（写下您的修改说明）：
-    ```bash
-    git commit -m "Update: Added P2 prediction model, PWA support, and AST localization"
+2.  **强制推送（仅限架构调整时使用，可打破机器人冲突）**：
+    ```powershell
+    git push origin main --force
     ```
-5.  **推送到 GitHub**：
-    ```bash
-    git push origin main
-    ```
+    *注：强制推送会以您本地的版本为准覆盖云端，彻底解决由于机器人抢跑导致的推送拒绝问题。*
 
 ---
 
-## 第二部分：GitHub 端的关键配置
+## 第二部分：GitHub 自动化权限配置 (Critical!)
 
-为了让项目每天自动更新数据，您需要在 GitHub 仓库中开启必要的权限。
+为了让机器人能自动生成数据并发布网页，您必须开启以下权限：
 
-### 1. 开启自动化写权限 (Critical!)
-默认情况下，GitHub Actions 可能没有权限将生成的 `data.json` 推送回您的仓库。
-*   进入 GitHub 仓库页面。
-*   点击 **Settings** (顶部菜单) -> **Actions** (左侧菜单) -> **General**。
-*   滚动到最下方 **Workflow permissions** 部分。
-*   选择 **"Read and write permissions"**。
-*   点击 **Save**。
-
-### 2. 检查自动化运行状态
-*   点击顶部菜单的 **Actions** 选项卡。
-*   您会看到名为 "Update Gas Data Daily" 的工作流。
-*   如果想立即测试，可以点击左侧的工作流名称，然后点击右侧的 **Run workflow** 按钮。
+1.  进入 GitHub 仓库页面 -> **Settings** -> **Actions** -> **General**。
+2.  滚动到最下方 **Workflow permissions**。
+3.  选择 **"Read and write permissions"**。
+4.  勾选 **"Allow GitHub Actions to create and approve pull requests"**（如果存在该选项）。
+5.  点击 **Save**。
 
 ---
 
-## 第三部分：Cloudflare 配置指南
+## 第三部分：Cloudflare Pages 从零配置步骤
 
-我们推荐使用 **Cloudflare Pages** 来托管此项目，因为它速度极快、完全免费，且自带 SSL 证书。
+Cloudflare Pages 是托管本项目的最佳选择，它会自动从您的 `gh-pages` 分支抓取数据上线。
 
-### 1. 关联仓库
-*   登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)。
-*   点击左侧菜单的 **Workers & Pages** -> **Create application** -> **Pages** -> **Connect to Git**。
-*   选择您的 GitHub 账号和 `nb-gas-price-dashboard` 仓库。
-
-### 2. 构建设置 (Build Settings)
-*   **Project name**: `nb-gas-price-dashboard` (或自定义)
-*   **Production branch**: `main`
-*   **Framework preset**: `None`
-*   **Build command**: (留空，因为我们已经通过 GitHub Actions 生成了静态文件)
-*   **Build output directory**: `.` (表示根目录)
-*   点击 **Save and Deploy**。
-
-### 3. 配置自定义域名 (可选但推荐)
-如果您有自己的域名：
-*   在 Pages 项目页面点击 **Custom domains**。
-*   点击 **Set up a custom domain**，输入您的域名（如 `gas.yourname.com`）。
-*   Cloudflare 会自动为您处理 DNS 解析。
+1.  **登录控制台**：访问 [dash.cloudflare.com](https://dash.cloudflare.com/)。
+2.  **创建应用**：点击左侧菜单 **Workers & Pages** -> **Create application** -> **Pages** -> **Connect to Git**。
+3.  **关联仓库**：选择您的 GitHub 账号和 `nb-gas-price-dashboard` 仓库。
+4.  **核心构建设置 (Build Settings)**：
+    *   **Project name**: `nb-gas-price-dashboard` (或自定义)。
+    *   **Production branch**: 选择 **`gh-pages`** (注意：必须选这个分支，它是机器人生成的)。
+    *   **Framework preset**: 选择 **`None`**。
+    *   **Build command**: 留空 (不需要填写)。
+    *   **Build output directory**: 填写一个点 **`.`** (表示根目录)。
+5.  **保存并部署**：点击 **Save and Deploy**。
 
 ---
 
-## 第四部分：常见问题排查 (Troubleshooting)
+## 第四部分：常见问题与冲突解决
 
-### Q1: 为什么网页上的数据没有更新？
-*   **检查 GitHub Actions**：看看最近的一次工作流是否报错（红色叉号）。如果报错，点击进去查看 Python 运行日志。
-*   **检查缓存**：Cloudflare 有强力缓存。如果您刚刚推送了代码，可能需要等待 1-2 分钟，或者尝试在无痕模式下打开网页。
+### 1. 为什么 GitHub 上没有 `gh-pages` 分支？
+`gh-pages` 是由 GitHub Actions 自动生成的。
+*   **解决**：点击仓库顶部的 **Actions** 选项卡，手动选择 "Update Gas Data and Deploy"，点击 **Run workflow**。等它跑完变成绿色勾号，分支就会出现。
 
-### Q2: 为什么手机上没有弹出“添加到主屏幕”？
-*   **HTTPS 要求**：PWA 必须在 HTTPS 环境下运行（Cloudflare Pages 默认开启）。
-*   **访问频率**：部分浏览器（如 Chrome）要求您访问过该网页至少两次，且间隔一段时间，才会弹出提示。
+### 2. 为什么 Cloudflare 部署失败？
+*   请检查您的 **Production branch** 是否选成了 `main`。在我们的新架构中，`main` 只存代码，`gh-pages` 才存真正的网页和数据。请在 Cloudflare 项目设置中将其改回 `gh-pages`。
 
-### Q3: 本地运行脚本报错 `ModuleNotFoundError`？
-*   请确保已运行安装命令：
-    ```bash
-    pip install pandas yfinance xlrd openpyxl
-    ```
+### 3. 数据显示为 0.0 或未更新？
+*   这通常是因为 `data.json` 还是旧逻辑生成的。请在本地运行 `python .\update_data.py` 后执行强制推送 (`--force`)。
 
 ---
-祝您的油价监控平台运行顺利！如有更多问题，请随时咨询。
+祝您的油价平台上线成功！如有疑问请随时咨询。

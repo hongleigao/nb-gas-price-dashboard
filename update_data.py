@@ -95,8 +95,6 @@ def update_gas_data():
         df_new_finance = pd.merge(rbob, cad, on='Date', how='inner')
         df_new_finance['RBOB_CAD_Cents_Liter'] = (df_new_finance['RBOB_USD_G'] * df_new_finance['CAD_Rate'] / settings.GALLON_TO_LITER) * 100
         
-        # [核心修复] 在合并前计算金融数据的真实 Delta
-        # 这确保了 nymex_delta 是基于最后两个实际交易日的差值
         df_new_finance['NYMEX_Real_Delta'] = df_new_finance['RBOB_CAD_Cents_Liter'].diff().round(1)
         real_nymex_delta = float(df_new_finance['NYMEX_Real_Delta'].iloc[-1]) if not df_new_finance.empty else 0.0
         
@@ -112,13 +110,12 @@ def update_gas_data():
         df_final['RBOB_CAD_Cents_Liter'] = df_final['RBOB_CAD_Cents_Liter'].ffill().bfill().round(1)
         
         df_final['Spread'] = (df_final['NB_Price'] - df_final['RBOB_CAD_Cents_Liter']).round(1)
-        # NB Delta 逻辑保持不变（周度变化）
         df_final['NB_Delta'] = df_final['NB_Price'].diff().round(1).fillna(0)
         
         df_final = df_final[df_final['Date'] >= (today - pd.Timedelta(days=settings.ROLLING_WINDOW_DAYS))]
         latest = df_final.iloc[-1]
 
-        # 预测模型逻辑保持不变
+        # 预测模型
         change_days = df_final[df_final['NB_Delta'] != 0].tail(4)
         avg_historical_spread = change_days['Spread'].mean() if not change_days.empty else latest['Spread']
         last_wed = today - pd.Timedelta(days=(today.weekday() - 2) % 7)
@@ -126,6 +123,13 @@ def update_gas_data():
         curr_avg = curr_rbob.mean() if not curr_rbob.empty else latest['RBOB_CAD_Cents_Liter']
         pred_change = curr_avg + avg_historical_spread - latest['NB_Price']
         
+        # P3: 市场环境深度分析
+        # 计算当前价差相对于 4 周均值的偏差 (核心建议)
+        spread_vs_avg = latest['Spread'] - avg_historical_spread
+        # 历史排名
+        spread_series = df_final['Spread'].dropna()
+        percentile = (spread_series < latest['Spread']).mean() * 100 if not spread_series.empty else 50.0
+
         print("4. 构建输出并保存...")
         ast_now = (pd.Timestamp.now(tz='UTC') - pd.Timedelta(hours=4)).strftime('%Y-%m-%d %H:%M:%S AST')
         
@@ -136,9 +140,10 @@ def update_gas_data():
                 "current_nb_price": float(latest['NB_Price']),
                 "nb_delta": float(latest['NB_Delta']),
                 "current_nymex_price": float(latest['RBOB_CAD_Cents_Liter']),
-                "nymex_delta": real_nymex_delta, # 使用修复后的真实交易日 Delta
+                "nymex_delta": real_nymex_delta,
                 "current_spread": float(latest['Spread']),
-                "spread_percentile": round((df_final['Spread'] < latest['Spread']).mean() * 100, 1),
+                "spread_vs_avg": round(spread_vs_avg, 1),
+                "spread_percentile": round(percentile, 1),
                 "prediction": { "change": round(pred_change, 1), "direction": "up" if pred_change > 0.5 else "down" if pred_change < -0.5 else "stable" }
             },
             "dates": df_final['Date'].dt.strftime('%Y-%m-%d').tolist(),
