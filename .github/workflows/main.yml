@@ -1,17 +1,18 @@
-name: Update Gas Data Daily
+name: Update Gas Data and Deploy
 
-# 触发器配置
 on:
   schedule:
-    - cron: '0 8 * * *' # 每天 UTC 时间早上 8 点（AST 大约凌晨 4/5 点）自动运行一次
-  workflow_dispatch: # 允许你在 GitHub 网页上通过点击按钮手动触发运行
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
 
-# 权限配置（必须开启，否则机器人无法把生成的 JSON 提交到仓库）
 permissions:
   contents: write
 
 jobs:
-  build-and-update:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -31,10 +32,12 @@ jobs:
       - name: Run ETL Script
         run: python update_data.py
 
-      - name: Commit and Push changes
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add data.json
-          # 如果 data.json 没有发生变化，就不提交，避免报错退出
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update data.json" && git push)
+      - name: Deploy to GitHub Pages Branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          publish_branch: gh-pages
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: "Auto-update data and deploy [skip ci]"
