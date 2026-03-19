@@ -70,15 +70,13 @@ def update_gas_data():
         today = pd.Timestamp.now().normalize()
         df_old = get_existing_data()
         
-        # 扩展 NB 官方价格序列到今天
         df_nb_official.set_index('Date', inplace=True)
         full_range = pd.date_range(start=df_nb_official.index.min(), end=today, freq='D')
         df_nb_ext = df_nb_official.reindex(full_range).ffill()
         df_nb_ext.index.name = 'Date'
         df_nb_ext = df_nb_ext.reset_index()
 
-        print("3. 获取金融数据 (增量抓取最近 30 天)...")
-        # 即使是增量，我们也抓取最近 30 天以确保数据一致性（汇率和期货可能修正）
+        print("3. 获取金融数据 (增量抓取)...")
         fetch_start = (today - pd.Timedelta(days=settings.INCREMENTAL_FETCH_DAYS)).strftime('%Y-%m-%d')
         yf_end = (today + pd.Timedelta(days=1)).strftime('%Y-%m-%d')
         
@@ -96,34 +94,31 @@ def update_gas_data():
         
         df_new_finance = pd.merge(rbob, cad, on='Date', how='inner')
         df_new_finance['RBOB_CAD_Cents_Liter'] = (df_new_finance['RBOB_USD_G'] * df_new_finance['CAD_Rate'] / settings.GALLON_TO_LITER) * 100
+        
+        # [核心修复] 在合并前计算金融数据的真实 Delta
+        # 这确保了 nymex_delta 是基于最后两个实际交易日的差值
+        df_new_finance['NYMEX_Real_Delta'] = df_new_finance['RBOB_CAD_Cents_Liter'].diff().round(1)
+        real_nymex_delta = float(df_new_finance['NYMEX_Real_Delta'].iloc[-1]) if not df_new_finance.empty else 0.0
+        
         df_new_finance = df_new_finance[['Date', 'RBOB_CAD_Cents_Liter']]
 
-        # 合并逻辑
         if df_old is not None:
-            # 仅保留旧数据中 fetch_start 之前的部分
             df_old_limited = df_old[df_old['Date'] < pd.to_datetime(fetch_start)]
             df_finance_combined = pd.concat([df_old_limited[['Date', 'RBOB_CAD_Cents_Liter']], df_new_finance]).drop_duplicates('Date')
         else:
-            # 如果没有旧数据，则需要全量抓取金融数据（此处简化处理，假设第一次运行或手动重刷）
-            print("未找到旧数据，执行全量抓取...")
-            all_start = df_nb_ext['Date'].min().strftime('%Y-%m-%d')
-            # ... (此处省略全量抓取代码，实际生产中可手动触发全量)
-            # 为了演示，我们暂时直接用 new_finance，生产中第一次运行需 fetch_start=all_start
             df_finance_combined = df_new_finance 
 
-        # 最终合并 NB 官方价和金融数据
         df_final = pd.merge(df_nb_ext, df_finance_combined, on='Date', how='left')
         df_final['RBOB_CAD_Cents_Liter'] = df_final['RBOB_CAD_Cents_Liter'].ffill().bfill().round(1)
         
-        # P1 & P2 计算
         df_final['Spread'] = (df_final['NB_Price'] - df_final['RBOB_CAD_Cents_Liter']).round(1)
+        # NB Delta 逻辑保持不变（周度变化）
         df_final['NB_Delta'] = df_final['NB_Price'].diff().round(1).fillna(0)
         
-        # 裁剪到最近 2 年
         df_final = df_final[df_final['Date'] >= (today - pd.Timedelta(days=settings.ROLLING_WINDOW_DAYS))]
         latest = df_final.iloc[-1]
 
-        # 预测模型
+        # 预测模型逻辑保持不变
         change_days = df_final[df_final['NB_Delta'] != 0].tail(4)
         avg_historical_spread = change_days['Spread'].mean() if not change_days.empty else latest['Spread']
         last_wed = today - pd.Timedelta(days=(today.weekday() - 2) % 7)
@@ -131,16 +126,7 @@ def update_gas_data():
         curr_avg = curr_rbob.mean() if not curr_rbob.empty else latest['RBOB_CAD_Cents_Liter']
         pred_change = curr_avg + avg_historical_spread - latest['NB_Price']
         
-        # P3: 历史百分位参考 (Market Context)
-        # 计算当前价差在过去 730 天中的排名位置
-        spread_series = df_final['Spread'].dropna()
-        if not spread_series.empty:
-            percentile = (spread_series < latest['Spread']).mean() * 100
-        else:
-            percentile = 50.0
-
         print("4. 构建输出并保存...")
-        # AST 本地化: NB 通常是 UTC-4 (大西洋时间)
         ast_now = (pd.Timestamp.now(tz='UTC') - pd.Timedelta(hours=4)).strftime('%Y-%m-%d %H:%M:%S AST')
         
         output_data = {
@@ -150,8 +136,9 @@ def update_gas_data():
                 "current_nb_price": float(latest['NB_Price']),
                 "nb_delta": float(latest['NB_Delta']),
                 "current_nymex_price": float(latest['RBOB_CAD_Cents_Liter']),
+                "nymex_delta": real_nymex_delta, # 使用修复后的真实交易日 Delta
                 "current_spread": float(latest['Spread']),
-                "spread_percentile": round(percentile, 1),
+                "spread_percentile": round((df_final['Spread'] < latest['Spread']).mean() * 100, 1),
                 "prediction": { "change": round(pred_change, 1), "direction": "up" if pred_change > 0.5 else "down" if pred_change < -0.5 else "stable" }
             },
             "dates": df_final['Date'].dt.strftime('%Y-%m-%d').tolist(),
