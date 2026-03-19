@@ -1,0 +1,15 @@
+{
+  "name": "NB Gas Tracker",
+  "short_name": "GasTracker",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#d94e5d",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2311/2311926.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
