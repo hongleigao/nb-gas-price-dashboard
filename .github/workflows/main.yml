@@ -40,4 +40,6 @@ jobs:
           publish_branch: gh-pages
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_message: "Auto-update data and deploy [skip ci]"
+          commit_message: "Data Update: ${{ github.event.head_commit.message || 'Scheduled Sync' }}"
+          force_orphan: false # 保持历史记录，但确保触发更新
+
