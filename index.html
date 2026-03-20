@@ -17,6 +17,7 @@
             --border-color: #eeeeee;
             --card-bg: #ffffff;
             --status-bg: #fcfcfc;
+            --skeleton-bg: #f0f0f0;
         }
         @media (prefers-color-scheme: dark) {
             :root {
@@ -27,15 +28,15 @@
                 --border-color: #333333;
                 --card-bg: #2d2d2d;
                 --status-bg: #252525;
+                --skeleton-bg: #333333;
             }
         }
         body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-main); transition: all 0.3s ease; }
         .container { background: var(--container-bg); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); padding: 25px; max-width: 1200px; margin: 0 auto; }
         #chart { width: 100%; height: 550px; margin-top: 20px; }
         h1 { text-align: center; color: var(--text-main); font-size: 26px; margin-bottom: 20px; font-weight: 700; }
-        #loading { text-align: center; color: var(--text-sub); font-size: 16px; margin: 50px 0; }
         
-        /* P0: Value Cards Styling */
+        /* Value Cards Styling */
         .cards-container { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
         .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; flex: 1; min-width: 220px; text-align: center; transition: transform 0.2s ease; }
         .card:hover { transform: translateY(-3px); }
@@ -54,6 +55,12 @@
 
         #status-bar { text-align: center; margin-bottom: 20px; font-size: 12px; padding: 10px; background: var(--status-bg); border-radius: 8px; display: none; border: 1px solid var(--border-color); color: var(--text-sub); }
         
+        /* Skeleton Animation */
+        @keyframes shimmer { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        .skeleton { background-color: var(--skeleton-bg); border-radius: 8px; animation: shimmer 1.5s infinite ease-in-out; }
+        .skeleton-card { height: 100px; flex: 1; min-width: 220px; }
+        .skeleton-chart { height: 500px; width: 100%; margin-top: 20px; }
+
         @media (max-width: 768px) {
             .container { padding: 15px; }
             #chart { height: 400px; }
@@ -76,56 +83,69 @@
     <div class="container">
         <h1>Gas Price Tracker</h1>
         
-        <div id="cards" class="cards-container" style="display:none;">
-            <div class="card">
-                <div class="card-label">NB Reg Gas Price</div>
-                <div id="nb-val" class="card-value">--</div>
-                <div id="nb-delta" class="card-delta">--</div>
+        <!-- Skeleton Loader (Visible by default) -->
+        <div id="skeleton-container">
+            <div class="cards-container">
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
             </div>
-            <div class="card">
-                <div class="card-label">NYMEX RBOB (CAD)</div>
-                <div id="nymex-val" class="card-value">--</div>
-                <div id="nymex-delta" class="card-delta">--</div>
-            </div>
-            <div class="card card-prediction">
-                <div class="card-label">
-                    Weekly Forecast (Thu)
-                    <span class="tooltip">ⓘ
-                        <span class="tooltiptext">
-                            <div class="tooltip-header">Forecast Logic</div>
-                            NB prices are set based on the average benchmark price from Wednesday to Tuesday. This forecast compares the current cycle's average to the previous week's.
-                            <div class="disclaimer">Disclaimer: This is an estimate based on market trends and current exchange rates. Actual EUB regulated prices may vary. Use for informational purposes only.</div>
-                        </span>
-                    </span>
+            <div class="skeleton skeleton-chart"></div>
+        </div>
+
+        <!-- Real Content (Hidden by default) -->
+        <div id="real-content" style="display:none;">
+            <div id="cards" class="cards-container">
+                <div class="card">
+                    <div class="card-label">NB Reg Gas Price</div>
+                    <div id="nb-val" class="card-value">--</div>
+                    <div id="nb-delta" class="card-delta">--</div>
                 </div>
-                <div id="pred-val" class="card-value">--</div>
-                <div id="pred-direction" class="card-delta">--</div>
+                <div class="card">
+                    <div class="card-label">NYMEX RBOB (CAD)</div>
+                    <div id="nymex-val" class="card-value">--</div>
+                    <div id="nymex-delta" class="card-delta">--</div>
+                </div>
+                <div class="card card-prediction">
+                    <div class="card-label">
+                        Weekly Forecast (Thu)
+                        <span class="tooltip">ⓘ
+                            <span class="tooltiptext">
+                                <div class="tooltip-header">Forecast Logic</div>
+                                NB prices are set based on the average benchmark price from Wednesday to Tuesday. This forecast compares the current cycle's average to the previous week's.
+                                <div class="disclaimer">Disclaimer: This is an automated estimate for informational purposes only. Actual regulated prices are determined by the NB EUB and may vary.</div>
+                            </span>
+                        </span>
+                    </div>
+                    <div id="pred-val" class="card-value">--</div>
+                    <div id="pred-direction" class="card-delta">--</div>
+                </div>
+                <div class="card">
+                    <div class="card-label">Retail Spread</div>
+                    <div id="spread-val" class="card-value">--</div>
+                    <div id="spread-vs-avg" class="card-delta">--</div>
+                </div>
             </div>
-            <div class="card">
-                <div class="card-label">Retail Spread</div>
-                <div id="spread-val" class="card-value">--</div>
-                <div id="spread-vs-avg" class="card-delta">--</div>
-            </div>
-        </div>
 
-        <div id="status-bar">
-            <span id="sync-status"></span> &nbsp; | &nbsp; 
-            <span id="price-status"></span>
-        </div>
-        
-        <div id="loading">Gathering data and calculating insights...</div>
-        <div id="chart" style="display:none;"></div>
-
-        <!-- Data Sources & Methodology Footer -->
-        <div class="footer" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-sub); line-height: 1.6;">
-            <div style="margin-bottom: 10px;">
-                <b>Data Sources:</b> 
-                <a href="https://nbeub.ca/current-petroleum-prices-2" target="_blank" style="color: #d94e5d; text-decoration: none;">NB EUB Official</a> &bull; 
-                <a href="https://finance.yahoo.com/quote/RB=F/" target="_blank" style="color: #3498db; text-decoration: none;">NYMEX RBOB via Yahoo</a>
+            <div id="status-bar">
+                <span id="sync-status"></span> &nbsp; | &nbsp; 
+                <span id="price-status"></span>
             </div>
-            <div>
-                <b>Forecast Methodology:</b> Calculated using the "Stable Spread Model" which benchmarks current market trends against the 4-week historical average retail margin. 
-                <span style="color: var(--text-main); font-weight: 600;">Disclaimer: This is an automated estimate for informational purposes only. Actual regulated prices are determined by the NB EUB and may vary.</span>
+            
+            <div id="chart"></div>
+
+            <!-- Data Sources & Methodology Footer -->
+            <div class="footer" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-sub); line-height: 1.6;">
+                <div style="margin-bottom: 10px;">
+                    <b>Data Sources:</b> 
+                    <a href="https://nbeub.ca/current-petroleum-prices-2" target="_blank" style="color: #d94e5d; text-decoration: none;">NB EUB Official</a> &bull; 
+                    <a href="https://finance.yahoo.com/quote/RB=F/" target="_blank" style="color: #3498db; text-decoration: none;">NYMEX RBOB via Yahoo</a>
+                </div>
+                <div>
+                    <b>Forecast Methodology:</b> Calculated using the "Stable Spread Model" which benchmarks current market trends against the 4-week historical average retail margin. 
+                    <span style="color: var(--text-main); font-weight: 600;">Disclaimer: This is an automated estimate for informational purposes only. Actual regulated prices are determined by the NB EUB and may vary.</span>
+                </div>
             </div>
         </div>
     </div>
@@ -138,7 +158,6 @@
         }
 
         var chartDom = document.getElementById('chart');
-        var loadingDom = document.getElementById('loading');
         const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         var myChart = echarts.init(chartDom, isDarkMode ? 'dark' : null);
         if (isDarkMode) chartDom.style.backgroundColor = 'transparent';
@@ -158,9 +177,9 @@
         fetch('data.json')
             .then(response => response.json())
             .then(data => {
-                loadingDom.style.display = 'none';
-                chartDom.style.display = 'block';
-                document.getElementById('cards').style.display = 'flex';
+                // Switch from Skeleton to Real Content
+                document.getElementById('skeleton-container').style.display = 'none';
+                document.getElementById('real-content').style.display = 'block';
                 myChart.resize();
 
                 if (data.metadata) {
@@ -169,8 +188,6 @@
                     document.getElementById('nymex-val').innerText = data.metadata.current_nymex_price.toFixed(1) + " ¢";
                     document.getElementById('nymex-delta').innerHTML = formatDelta(data.metadata.nymex_delta);
                     document.getElementById('spread-val').innerText = data.metadata.current_spread.toFixed(1) + " ¢";
-                    
-                    // P3: Retail Spread vs 4W Average
                     document.getElementById('spread-vs-avg').innerHTML = formatSpreadDelta(data.metadata.spread_vs_avg);
                     
                     const pred = data.metadata.prediction;
@@ -194,7 +211,15 @@
                 var option = {
                     backgroundColor: 'transparent',
                     tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
-                    legend: { data: ['NB Price', 'NYMEX RBOB', 'Retail Spread'], top: '0%', textStyle: { color: isDarkMode ? '#aaa' : '#333' } },
+                    legend: { 
+                        data: ['NB Price', 'NYMEX RBOB', 'Retail Spread'], 
+                        top: '0%', 
+                        textStyle: { color: isDarkMode ? '#aaa' : '#333' },
+                        // P3: Chart Noise Reduction - Default hide Retail Spread
+                        selected: {
+                            'Retail Spread': false
+                        }
+                    },
                     grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
                     xAxis: { type: 'category', boundaryGap: false, data: data.dates },
                     yAxis: [
