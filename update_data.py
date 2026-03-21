@@ -70,7 +70,7 @@ def update_gas_data():
         df_nb_official['Date'] = pd.to_datetime(df_nb_official['Date'], errors='coerce')
         df_nb_official['NB_Price'] = pd.to_numeric(df_nb_official['NB_Price'], errors='coerce')
         
-        # 捕捉所有变动点，严格剔除未来日期
+        # 捕捉所有变动点
         df_nb_official = df_nb_official.dropna().sort_values('Date').reset_index(drop=True)
         df_nb_official = df_nb_official[df_nb_official['Date'] <= today]
         
@@ -117,28 +117,41 @@ def update_gas_data():
         df_final['RBOB_CAD_Cents_Liter'] = df_final['RBOB_CAD_Cents_Liter'].ffill().bfill().round(1)
         
         df_final['Spread'] = (df_final['NB_Price'] - df_final['RBOB_CAD_Cents_Liter']).round(1)
-        df_final['NB_Delta'] = df_final['NB_Price'].diff().round(1).fillna(0)
+        # 计算单日变动，仅用于标记红点
+        df_final['NB_Is_Changed'] = df_final['NB_Price'].diff().fillna(0) != 0
         
         df_final = df_final[df_final['Date'] >= (today - pd.Timedelta(days=settings.ROLLING_WINDOW_DAYS))]
         latest = df_final.iloc[-1]
 
-        # P2-Core & P3: 统计模型
-        # 1. 识别过去 8 个调价日
-        change_days = df_final[df_final['NB_Delta'] != 0].tail(8)
-        # 使用 8 周中位数作为“常态基准”
-        median_historical_spread = change_days['Spread'].median() if not change_days.empty else latest['Spread']
+        # [核心修复 1] 改进 NB Delta 逻辑：计算当前价格与上一个调价日价格的差值
+        change_events = df_final[df_final['NB_Is_Changed'] == True]
+        if len(change_events) >= 1:
+            last_change_val = change_events['NB_Price'].iloc[-1]
+            # 如果今天正好是调价日，我们需要找“上一个”变动日的价格
+            if latest['NB_Is_Changed'] and len(change_events) >= 2:
+                prev_change_val = change_events['NB_Price'].iloc[-2]
+            else:
+                # 否则说明今天在延续之前的价格，我们需要对比变动发生前的那个价格
+                # 逻辑：找到最后一个变动点，它的前一行就是旧价格
+                last_event_idx = change_events.index[-1]
+                prev_change_val = df_final.loc[last_event_idx - 1, 'NB_Price'] if last_event_idx > 0 else last_change_val
+            
+            real_nb_delta = latest['NB_Price'] - prev_change_val
+        else:
+            real_nb_delta = 0.0
+
+        # P2-Core: 升级版预测模型 (Beta 0.48)
+        change_days_for_median = df_final[df_final['NB_Is_Changed']].tail(8)
+        median_historical_spread = change_days_for_median['Spread'].median() if not change_days_for_median.empty else latest['Spread']
         
-        # 2. 预测计算 (Beta 0.48)
         last_wed = today - pd.Timedelta(days=(today.weekday() - 2) % 7)
         curr_cycle_trading = df_final[(df_final['Date'] >= last_wed) & (df_final['Date'].dt.dayofweek < 5)]
         curr_avg = curr_cycle_trading['RBOB_CAD_Cents_Liter'].mean() if not curr_cycle_trading.empty else latest['RBOB_CAD_Cents_Liter']
         
         BETA = 0.48
-        # 注意：预测模型现在也基于 8 周中位基准，更具抗干扰性
         predicted_nb_price = curr_avg + median_historical_spread
         calibrated_change = (predicted_nb_price - latest['NB_Price']) * BETA
         
-        # 3. 市场偏差分析
         spread_vs_median = latest['Spread'] - median_historical_spread
         spread_series = df_final['Spread'].dropna()
         percentile = (spread_series < latest['Spread']).mean() * 100 if not spread_series.empty else 50.0
@@ -151,11 +164,11 @@ def update_gas_data():
                 "last_sync": ast_now_str,
                 "nb_last_date": df_nb_official.index.max().strftime('%Y-%m-%d'),
                 "current_nb_price": float(latest['NB_Price']),
-                "nb_delta": float(latest['NB_Delta']),
+                "nb_delta": float(real_nb_delta), # 使用修复后的逻辑
                 "current_nymex_price": float(latest['RBOB_CAD_Cents_Liter']),
                 "nymex_delta": real_nymex_delta,
                 "current_spread": float(latest['Spread']),
-                "spread_vs_avg": round(spread_vs_median, 1), # 改为 VS 中位数
+                "spread_vs_avg": round(spread_vs_median, 1),
                 "spread_percentile": round(percentile, 1),
                 "prediction": { 
                     "change": round(calibrated_change, 1), 
@@ -171,7 +184,7 @@ def update_gas_data():
         validate_data(output_data)
         with open(settings.DATA_FILE, 'w') as f:
             json.dump(output_data, f)
-        print(f"更新完成。预测变动: {calibrated_change:.1f}¢ (基于8周中位基准)")
+        print(f"更新成功。NB Delta: {real_nb_delta:+.1f}¢")
 
     except Exception as e:
         print(f"❌ 关键错误: {e}")

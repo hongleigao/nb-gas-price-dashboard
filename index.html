@@ -3,200 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gas Price Comparison (NB vs NYMEX RBOB)</title>
+    <title>NB Gas Price Pulse</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#d94e5d">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <style>
         :root {
-            --bg-color: #f8f9fa;
+            --bg-color: #f0f2f5;
             --container-bg: #ffffff;
-            --text-main: #333333;
+            --text-main: #1a1a1a;
             --text-sub: #666666;
-            --border-color: #eeeeee;
+            --border-color: #e8e8e8;
             --card-bg: #ffffff;
-            --status-bg: #fcfcfc;
-            --skeleton-bg: #f0f0f0;
+            --hero-bg: linear-gradient(135deg, #2c3e50 0%, #000000 100%);
+            --hero-text: #ffffff;
+            --accent-orange: #f39c12;
+            --skeleton-bg: #e0e0e0;
         }
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg-color: #121212;
-                --container-bg: #1e1e1e;
-                --text-main: #e0e0e0;
-                --text-sub: #aaaaaa;
-                --border-color: #333333;
-                --card-bg: #2d2d2d;
-                --status-bg: #252525;
-                --skeleton-bg: #333333;
+                --bg-color: #0a0a0a;
+                --container-bg: #141414;
+                --text-main: #f0f0f0;
+                --text-sub: #888888;
+                --border-color: #262626;
+                --card-bg: #1c1c1c;
+                --hero-bg: linear-gradient(135deg, #1a1a1a 0%, #333333 100%);
+                --skeleton-bg: #262626;
             }
         }
-        body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-main); transition: all 0.3s ease; }
-        .container { background: var(--container-bg); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); padding: 25px; max-width: 1200px; margin: 0 auto; }
-        #chart { width: 100%; height: 550px; margin-top: 20px; }
-        h1 { text-align: center; color: var(--text-main); font-size: 26px; margin-bottom: 20px; font-weight: 700; }
+        body { margin: 0; padding: 15px; font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif; background-color: var(--bg-color); color: var(--text-main); }
+        .container { background: var(--container-bg); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); padding: 25px; max-width: 1200px; margin: 0 auto; min-height: 80vh; }
+        h1 { text-align: left; font-size: 24px; margin-bottom: 25px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
         
-        .cards-container { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
-        .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; flex: 1; min-width: 220px; text-align: center; transition: transform 0.2s ease; }
-        .card:hover { transform: translateY(-3px); }
-        .card-label { font-size: 10px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; font-weight: 700; }
-        .card-value { font-size: 30px; font-weight: 800; color: var(--text-main); }
-        .card-delta { font-size: 13px; margin-top: 6px; font-weight: 600; }
-        .card-meta { font-size: 11px; color: var(--text-sub); margin-top: 4px; }
+        .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+        .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; text-align: left; }
+        .card-label { font-size: 10px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; font-weight: 700; }
+        .card-value { font-size: 28px; font-weight: 800; }
+        .card-delta { font-size: 13px; margin-top: 8px; font-weight: 600; }
         
-        .card-prediction { border-top: 4px solid #3498db; background: rgba(52, 152, 219, 0.05); }
-        .pred-up { color: #d94e5d; }
-        .pred-down { color: #2ecc71; }
-        .pred-stable { color: #95a5a6; }
+        .card-hero { grid-column: span 2; background: var(--hero-bg); color: var(--hero-text); border: none; }
+        .card-hero .card-label { color: rgba(255,255,255,0.6); }
+        .card-hero .card-value { font-size: 42px; }
 
-        .delta-up { color: #d94e5d; }
-        .delta-down { color: #2ecc71; }
-        .delta-neutral { color: #95a5a6; }
+        .delta-up { color: #ff4d4f; }
+        .delta-down { color: #52c41a; }
+        .delta-neutral { color: var(--text-sub); }
 
-        #status-bar { text-align: center; margin-bottom: 20px; font-size: 12px; padding: 10px; background: var(--status-bg); border-radius: 8px; display: none; border: 1px solid var(--border-color); color: var(--text-sub); }
-        
         @keyframes shimmer { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-        .skeleton { background-color: var(--skeleton-bg); border-radius: 8px; animation: shimmer 1.5s infinite ease-in-out; }
-        .skeleton-card { height: 100px; flex: 1; min-width: 220px; }
+        .skeleton { background-color: var(--skeleton-bg); border-radius: 12px; animation: shimmer 1.5s infinite; }
+        .skeleton-hero { height: 140px; grid-column: span 2; }
+        .skeleton-small { height: 140px; }
         .skeleton-chart { height: 500px; width: 100%; margin-top: 20px; }
 
-        @media (max-width: 768px) {
-            .container { padding: 15px; }
-            #chart { height: 400px; }
-            .card-value { font-size: 24px; }
-        }
+        #chart { width: 100%; height: 500px; margin-top: 30px; }
+        #status-bar { font-size: 11px; color: var(--text-sub); margin-bottom: 15px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+
+        @media (max-width: 992px) { .cards-grid { grid-template-columns: repeat(2, 1fr); } }
+        
         .tooltip { position: relative; display: inline-block; cursor: help; margin-left: 5px; }
         .tooltip .tooltiptext {
-            visibility: hidden; width: 250px; background-color: var(--card-bg); color: var(--text-main); text-align: left;
-            border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; position: absolute; z-index: 100;
-            bottom: 125%; left: 50%; margin-left: -125px; opacity: 0; transition: opacity 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            font-size: 12px; line-height: 1.4; font-weight: normal; text-transform: none; letter-spacing: normal;
+            visibility: hidden; width: 220px; background-color: #1f1f1f; color: #fff; padding: 12px; border-radius: 8px;
+            position: absolute; z-index: 100; bottom: 125%; left: 0; opacity: 0; transition: opacity 0.3s; font-size: 11px; line-height: 1.4;
         }
         .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
-        .tooltip-header { font-weight: bold; margin-bottom: 5px; color: #3498db; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
-        .disclaimer { font-size: 10px; color: #888; margin-top: 8px; font-style: italic; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Gas Price Tracker</h1>
+        <div id="status-bar">
+            <span id="sync-status">--</span>
+            <span id="price-status">--</span>
+        </div>
+        <h1>⛽ NB Gas Price Pulse</h1>
         
-        <div id="skeleton-container">
-            <div class="cards-container">
-                <div class="skeleton skeleton-card"></div>
-                <div class="skeleton skeleton-card"></div>
-                <div class="skeleton skeleton-card"></div>
-                <div class="skeleton skeleton-card"></div>
-            </div>
-            <div class="skeleton skeleton-chart"></div>
+        <div id="skeleton-container" class="cards-grid">
+            <div class="skeleton skeleton-hero"></div>
+            <div class="skeleton skeleton-small"></div>
+            <div class="skeleton skeleton-small"></div>
+            <div class="skeleton skeleton-chart" style="grid-column: span 4;"></div>
         </div>
 
         <div id="real-content" style="display:none;">
-            <div id="cards" class="cards-container">
-                <div class="card">
-                    <div class="card-label">NB Reg Gas Price</div>
-                    <div id="nb-val" class="card-value">--</div>
-                    <div id="nb-delta" class="card-delta">--</div>
-                </div>
-                <div class="card">
-                    <div class="card-label">NYMEX RBOB (CAD)</div>
-                    <div id="nymex-val" class="card-value">--</div>
-                    <div id="nymex-delta" class="card-delta">--</div>
-                </div>
-                <div class="card card-prediction">
-                    <div class="card-label">
-                        Weekly Forecast (Thu)
-                        <span class="tooltip">ⓘ
-                            <span class="tooltiptext">
-                                <div class="tooltip-header">Forecast Info</div>
-                                Automated estimate calculated based on current international market trends and historical pricing patterns. 
-                                <div class="disclaimer">Disclaimer: For informational purposes only. The NB EUB maintains final authority over all regulated prices.</div>
-                            </span>
-                        </span>
-                    </div>
+            <div class="cards-grid">
+                <div class="card card-hero">
+                    <div class="card-label">Weekly Forecast (Thu) <span class="tooltip">ⓘ<span class="tooltiptext">Automated estimate based on market trends. NB EUB maintains final authority.</span></span></div>
                     <div id="pred-val" class="card-value">--</div>
                     <div id="pred-direction" class="card-delta">--</div>
                 </div>
                 <div class="card">
-                    <div class="card-label">Retail Spread</div>
-                    <div id="spread-val" class="card-value">--</div>
-                    <div id="spread-vs-avg" class="card-delta">--</div>
-                    <div id="spread-pct" class="card-meta">--</div>
+                    <div class="card-label">NB Price</div>
+                    <div id="nb-val" class="card-value">--</div>
+                    <div id="nb-delta" class="card-delta">--</div>
+                </div>
+                <div class="card">
+                    <div class="card-label">Benchmark</div>
+                    <div id="nymex-val" class="card-value">--</div>
+                    <div id="nymex-delta" class="card-delta">--</div>
+                </div>
+                <div class="card" style="grid-column: span 2;">
+                    <div class="card-label">Retail Pricing Efficiency</div>
+                    <div style="display: flex; align-items: baseline; gap: 15px;">
+                        <div id="spread-val" class="card-value">--</div>
+                        <div id="spread-vs-avg" class="card-delta" style="margin-top:0;">--</div>
+                    </div>
+                    <div id="spread-pct" style="font-size: 11px; color: var(--text-sub); margin-top: 8px;">--</div>
                 </div>
             </div>
-
-            <div id="status-bar">
-                <span id="sync-status"></span> &nbsp; | &nbsp; 
-                <span id="price-status"></span>
-            </div>
-            
             <div id="chart"></div>
-
-            <div class="footer" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-sub); line-height: 1.6;">
-                <div style="margin-bottom: 8px;">
+            <div class="footer" style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-sub); line-height: 1.6;">
+                <div>
                     <b>Data Sources:</b> 
                     <a href="https://nbeub.ca/current-petroleum-prices-2" target="_blank" style="color: #d94e5d; text-decoration: none;">NB EUB Official</a> &bull; 
                     <a href="https://finance.yahoo.com/quote/RB=F/" target="_blank" style="color: #3498db; text-decoration: none;">Market Benchmarks</a>
                 </div>
-                <div>
-                    <b>Disclaimer:</b> Forecasts are calculated based on current international market trends and historical pricing patterns. 
-                    <span style="color: var(--text-main); font-weight: 600;">Results are estimates and should be used for reference only. The NB EUB maintains final authority over all regulated prices.</span>
+                <div style="margin-top: 5px;">
+                    Disclaimer: Forecasts are estimates for informational purposes only. The NB EUB maintains final authority.
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').then(reg => console.log('SW Registered')).catch(err => console.error(err));
-            });
-        }
+        function safeSet(id, val) { const el = document.getElementById(id); if (el) el.innerText = val; }
 
-        var chartDom = document.getElementById('chart');
-        const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        var myChart = echarts.init(chartDom, isDarkMode ? 'dark' : null);
-        if (isDarkMode) chartDom.style.backgroundColor = 'transparent';
-
-        function formatDelta(val) {
-            if (val > 0) return `<span class="delta-up">▲ +${val.toFixed(1)}</span>`;
-            if (val < 0) return `<span class="delta-down">▼ ${val.toFixed(1)}</span>`;
-            return `<span class="delta-neutral">-- 0.0</span>`;
-        }
-
-        function formatSpreadDelta(val) {
-            if (val > 0.5) return `<span class="delta-up">▲ +${val.toFixed(1)} (Thick)</span>`;
-            if (val < -0.5) return `<span class="delta-down">▼ ${val.toFixed(1)} (Thin)</span>`;
-            return `<span class="delta-neutral">-- Stable</span>`;
-        }
+        var myChart;
+        const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
         fetch('data.json')
-            .then(response => response.json())
+            .then(res => res.json())
             .then(data => {
                 document.getElementById('skeleton-container').style.display = 'none';
                 document.getElementById('real-content').style.display = 'block';
-                myChart.resize();
+                
+                myChart = echarts.init(document.getElementById('chart'), isDarkMode ? 'dark' : null);
 
                 if (data.metadata) {
-                    document.getElementById('nb-val').innerText = data.metadata.current_nb_price.toFixed(1) + " ¢";
-                    document.getElementById('nb-delta').innerHTML = formatDelta(data.metadata.nb_delta);
-                    document.getElementById('nymex-val').innerText = data.metadata.current_nymex_price.toFixed(1) + " ¢";
-                    document.getElementById('nymex-delta').innerHTML = formatDelta(data.metadata.nymex_delta);
-                    document.getElementById('spread-val').innerText = data.metadata.current_spread.toFixed(1) + " ¢";
+                    const m = data.metadata;
+                    safeSet("nb-val", m.current_nb_price.toFixed(1) + " ¢");
+                    safeSet("nymex-val", m.current_nymex_price.toFixed(1) + " ¢");
+                    safeSet("spread-val", m.current_spread.toFixed(1) + " ¢");
                     
-                    // P3 Update: Median-based spread analysis
-                    document.getElementById('spread-vs-avg').innerHTML = formatSpreadDelta(data.metadata.spread_vs_avg);
-                    document.getElementById('spread-pct').innerText = `Higher than ${data.metadata.spread_percentile}% of history`;
+                    document.getElementById('nb-delta').innerHTML = m.nb_delta > 0 ? `<span class="delta-up">▲ +${m.nb_delta.toFixed(1)}</span>` : (m.nb_delta < 0 ? `<span class="delta-down">▼ ${Math.abs(m.nb_delta).toFixed(1)}</span>` : `<span class="delta-neutral">-- No Change</span>`);
+                    document.getElementById('nymex-delta').innerHTML = m.nymex_delta > 0 ? `<span class="delta-up">▲ +${m.nymex_delta.toFixed(1)}</span>` : (m.nymex_delta < 0 ? `<span class="delta-down">▼ ${Math.abs(m.nymex_delta).toFixed(1)}</span>` : `<span class="delta-neutral">-- Stable</span>`);
                     
-                    const pred = data.metadata.prediction;
-                    const absChange = Math.abs(pred.change).toFixed(1);
-                    document.getElementById('pred-val').innerText = (pred.direction === 'stable' ? '--' : (pred.change > 0 ? '+' : '') + pred.change + " ¢");
-                    document.getElementById('pred-direction').innerHTML = pred.direction === 'up' ? `<span class="pred-up">Expected Up ~${absChange} ¢</span>` : (pred.direction === 'down' ? `<span class="pred-down">Expected Down ~${absChange} ¢</span>` : `<span class="pred-stable">Expected Stable</span>`);
+                    const sDiff = m.spread_vs_avg;
+                    document.getElementById('spread-vs-avg').innerHTML = sDiff > 0 ? `<span style="color:#f39c12">▲ +${sDiff.toFixed(1)}</span>` : `<span style="color:#f39c12">▼ ${Math.abs(sDiff).toFixed(1)}</span>`;
+                    safeSet("spread-pct", `Higher than ${m.spread_percentile}% of history`);
 
-                    const statusBar = document.getElementById('status-bar');
-                    statusBar.style.display = 'block';
-                    document.getElementById('sync-status').innerHTML = `Sync: ${data.metadata.last_sync}`;
-                    document.getElementById('price-status').innerHTML = `NB Price active since ${data.metadata.nb_last_date}`;
+                    const p = m.prediction;
+                    safeSet("pred-val", (p.direction === 'stable' ? '--' : (p.change > 0 ? '+' : '') + p.change.toFixed(1) + " ¢"));
+                    document.getElementById('pred-direction').innerHTML = p.direction === 'up' ? `<span style="color:#ff7875">Expected Up</span>` : (p.direction === 'down' ? `<span style="color:#95de64">Expected Down</span>` : `Stable`);
+
+                    safeSet("sync-status", "Last Sync: " + m.last_sync);
+                    safeSet("price-status", "Effective: " + m.nb_last_date);
                 }
 
                 const markPoints = [];
@@ -206,27 +167,29 @@
                     }
                 }
 
-                var option = {
+                myChart.setOption({
                     backgroundColor: 'transparent',
-                    tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
-                    legend: { data: ['NB Price', 'NYMEX RBOB', 'Retail Spread'], top: '0%', textStyle: { color: isDarkMode ? '#aaa' : '#333' }, selected: { 'Retail Spread': false } },
-                    grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
-                    xAxis: { type: 'category', boundaryGap: false, data: data.dates },
-                    yAxis: [
-                        { type: 'value', name: '¢/L', scale: true, splitLine: { lineStyle: { color: isDarkMode ? '#333' : '#eee' } } },
-                        { type: 'value', name: 'Spread', scale: true, splitLine: { show: false } }
-                    ],
-                    dataZoom: [{ type: 'inside', start: 85, end: 100 }, { start: 85, end: 100 }],
+                    tooltip: { trigger: 'axis' },
+                    legend: { bottom: '0%', selected: { 'Retail Spread': false } },
+                    dataZoom: [{ type: 'inside', start: 85, end: 100 }, { start: 85, end: 100, bottom: 40 }],
+                    xAxis: { type: 'category', data: data.dates },
+                    yAxis: [{ type: 'value', scale: true }, { type: 'value', scale: true, splitLine: {show:false} }],
                     series: [
-                        { name: 'NB Price', type: 'line', smooth: true, symbol: 'none', lineStyle: { width: 4, color: '#d94e5d' }, itemStyle: { color: '#d94e5d' }, data: data.nb_prices, markPoint: { symbol: 'circle', data: markPoints } },
-                        { name: 'NYMEX RBOB', type: 'line', smooth: true, symbol: 'none', lineStyle: { width: 2, color: '#3498db', opacity: 0.7 }, itemStyle: { color: '#3498db' }, data: data.nymex_prices },
-                        { name: 'Retail Spread', type: 'line', smooth: true, yAxisIndex: 1, symbol: 'none', areaStyle: { opacity: 0.15, color: '#f39c12' }, lineStyle: { width: 1, color: '#f39c12', type: 'dashed' }, itemStyle: { color: '#f39c12' }, data: data.spreads }
+                        { name: 'NB Price', type: 'line', smooth: true, data: data.nb_prices, color: '#d94e5d', markPoint: { symbol: 'circle', data: markPoints } },
+                        { name: 'NYMEX RBOB', type: 'line', smooth: true, data: data.nymex_prices, color: '#3498db' },
+                        { 
+                            name: 'Retail Spread', type: 'line', smooth: true, yAxisIndex: 1, data: data.spreads, 
+                            color: '#f39c12', lineStyle: { type: 'dashed', width: 1.5 }, areaStyle: { opacity: 0.08 } 
+                        }
                     ]
-                };
-                myChart.setOption(option);
+                });
             })
-            .catch(error => console.error("Error:", error));
-        window.addEventListener('resize', function() { myChart.resize(); });
+            .catch(err => {
+                document.getElementById('skeleton-container').innerHTML = "<p>Failed to load data.</p>";
+                console.error(err);
+            });
+
+        window.onresize = () => myChart && myChart.resize();
     </script>
 </body>
 </html>

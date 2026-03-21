@@ -1,6 +1,6 @@
 {
-  "name": "NB Gas Tracker",
-  "short_name": "GasTracker",
+  "name": "NB Gas Price Pulse",
+  "short_name": "Gas Pulse",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f8f9fa",
