@@ -54,7 +54,7 @@ def update_gas_data():
         print(f"Current NB Date: {today.strftime('%Y-%m-%d')}")
 
         print("1. 获取 NB 历史油价 (动态解析)...")
-        df_raw = pd.read_excel(settings.NBEUB_XLS_URL, sheet_name=settings.EXCEL_SHEET_NAME, header=None)
+        df_raw = pd.read_excel(settings.NBEUB_XLS_URL, sheet_name=settings.EXCEL_SHEET_NAME, header=None, engine='xlrd')
         
         try:
             date_row_idx = df_raw[df_raw.apply(lambda x: x.astype(str).str.contains(settings.ROW_KEYWORD_DATE, case=False).any(), axis=1)].index[0]
