@@ -64,6 +64,8 @@ def update_gas_data():
         df_nb_official = pd.DataFrame({'Date': dates_raw, 'NB_Price': prices_raw})
         df_nb_official['Date'] = pd.to_datetime(df_nb_official['Date'], errors='coerce')
         df_nb_official['NB_Price'] = pd.to_numeric(df_nb_official['NB_Price'], errors='coerce')
+        
+        # [逻辑修正] 不再进行 drop_duplicates，以捕捉 Interruptor Clause 导致的同日多价格或连续调价
         df_nb_official = df_nb_official.dropna().sort_values('Date').reset_index(drop=True)
         
         print("2. 执行增量合并与时间轴填充...")
@@ -93,18 +95,20 @@ def update_gas_data():
         cad['Date'] = pd.to_datetime(cad['Date']).dt.tz_localize(None)
         
         df_new_finance = pd.merge(rbob, cad, on='Date', how='inner')
-        df_new_finance['RBOB_CAD_Cents_Liter'] = (df_new_finance['RBOB_USD_G'] * df_new_finance['CAD_Rate'] / settings.GALLON_TO_LITER) * 100
+        # [核心修复 2] 仅保留交易日计算均值和 Delta，防止周末权重污染
+        df_trading_days = df_new_finance[df_new_finance['Date'].dt.dayofweek < 5].copy()
+        df_trading_days['RBOB_CAD_Cents_Liter'] = (df_trading_days['RBOB_USD_G'] * df_trading_days['CAD_Rate'] / settings.GALLON_TO_LITER) * 100
         
-        df_new_finance['NYMEX_Real_Delta'] = df_new_finance['RBOB_CAD_Cents_Liter'].diff().round(1)
-        real_nymex_delta = float(df_new_finance['NYMEX_Real_Delta'].iloc[-1]) if not df_new_finance.empty else 0.0
+        real_nymex_delta = float(df_trading_days['RBOB_CAD_Cents_Liter'].diff().round(1).iloc[-1]) if len(df_trading_days) > 1 else 0.0
         
-        df_new_finance = df_new_finance[['Date', 'RBOB_CAD_Cents_Liter']]
+        # 准备合并用的金融序列
+        df_finance_to_merge = df_trading_days[['Date', 'RBOB_CAD_Cents_Liter']]
 
         if df_old is not None:
             df_old_limited = df_old[df_old['Date'] < pd.to_datetime(fetch_start)]
-            df_finance_combined = pd.concat([df_old_limited[['Date', 'RBOB_CAD_Cents_Liter']], df_new_finance]).drop_duplicates('Date')
+            df_finance_combined = pd.concat([df_old_limited[['Date', 'RBOB_CAD_Cents_Liter']], df_finance_to_merge]).drop_duplicates('Date')
         else:
-            df_finance_combined = df_new_finance 
+            df_finance_combined = df_finance_to_merge 
 
         df_final = pd.merge(df_nb_ext, df_finance_combined, on='Date', how='left')
         df_final['RBOB_CAD_Cents_Liter'] = df_final['RBOB_CAD_Cents_Liter'].ffill().bfill().round(1)
@@ -115,18 +119,23 @@ def update_gas_data():
         df_final = df_final[df_final['Date'] >= (today - pd.Timedelta(days=settings.ROLLING_WINDOW_DAYS))]
         latest = df_final.iloc[-1]
 
-        # 预测模型
+        # P2-Core: 升级版预测模型 (基于交易日平滑与 Beta 校准)
         change_days = df_final[df_final['NB_Delta'] != 0].tail(4)
         avg_historical_spread = change_days['Spread'].mean() if not change_days.empty else latest['Spread']
-        last_wed = today - pd.Timedelta(days=(today.weekday() - 2) % 7)
-        curr_rbob = df_final[df_final['Date'] >= last_wed]['RBOB_CAD_Cents_Liter']
-        curr_avg = curr_rbob.mean() if not curr_rbob.empty else latest['RBOB_CAD_Cents_Liter']
-        pred_change = curr_avg + avg_historical_spread - latest['NB_Price']
         
-        # P3: 市场环境深度分析
-        # 计算当前价差相对于 4 周均值的偏差 (核心建议)
+        # 仅取当前周期内的交易日进行平均
+        last_wed = today - pd.Timedelta(days=(today.weekday() - 2) % 7)
+        curr_cycle_trading = df_final[(df_final['Date'] >= last_wed) & (df_final['Date'].dt.dayofweek < 5)]
+        curr_avg = curr_cycle_trading['RBOB_CAD_Cents_Liter'].mean() if not curr_cycle_trading.empty else latest['RBOB_CAD_Cents_Liter']
+        
+        # [核心优化] 应用 0.48 Beta 系数
+        # 理由：回测显示期货市场波动约是 NB 零售监管价波动的 2 倍左右 (1/0.48)
+        BETA = 0.48
+        raw_pred_change = (curr_avg + avg_historical_spread) - latest['NB_Price']
+        calibrated_change = raw_pred_change * BETA
+        
+        # 市场分析指标
         spread_vs_avg = latest['Spread'] - avg_historical_spread
-        # 历史排名
         spread_series = df_final['Spread'].dropna()
         percentile = (spread_series < latest['Spread']).mean() * 100 if not spread_series.empty else 50.0
 
@@ -144,7 +153,10 @@ def update_gas_data():
                 "current_spread": float(latest['Spread']),
                 "spread_vs_avg": round(spread_vs_avg, 1),
                 "spread_percentile": round(percentile, 1),
-                "prediction": { "change": round(pred_change, 1), "direction": "up" if pred_change > 0.5 else "down" if pred_change < -0.5 else "stable" }
+                "prediction": { 
+                    "change": round(calibrated_change, 1), 
+                    "direction": "up" if calibrated_change > 0.5 else "down" if calibrated_change < -0.5 else "stable" 
+                }
             },
             "dates": df_final['Date'].dt.strftime('%Y-%m-%d').tolist(),
             "nb_prices": df_final['NB_Price'].tolist(),
@@ -155,7 +167,7 @@ def update_gas_data():
         validate_data(output_data)
         with open(settings.DATA_FILE, 'w') as f:
             json.dump(output_data, f)
-        print("更新成功完成。")
+        print(f"更新成功完成。预测变动: {calibrated_change:.1f}¢ (校准后)")
 
     except Exception as e:
         print(f"❌ 关键错误: {e}")

@@ -36,7 +36,6 @@
         #chart { width: 100%; height: 550px; margin-top: 20px; }
         h1 { text-align: center; color: var(--text-main); font-size: 26px; margin-bottom: 20px; font-weight: 700; }
         
-        /* Value Cards Styling */
         .cards-container { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
         .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; flex: 1; min-width: 220px; text-align: center; transition: transform 0.2s ease; }
         .card:hover { transform: translateY(-3px); }
@@ -55,7 +54,6 @@
 
         #status-bar { text-align: center; margin-bottom: 20px; font-size: 12px; padding: 10px; background: var(--status-bg); border-radius: 8px; display: none; border: 1px solid var(--border-color); color: var(--text-sub); }
         
-        /* Skeleton Animation */
         @keyframes shimmer { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
         .skeleton { background-color: var(--skeleton-bg); border-radius: 8px; animation: shimmer 1.5s infinite ease-in-out; }
         .skeleton-card { height: 100px; flex: 1; min-width: 220px; }
@@ -66,7 +64,6 @@
             #chart { height: 400px; }
             .card-value { font-size: 24px; }
         }
-        /* Tooltip Styling */
         .tooltip { position: relative; display: inline-block; cursor: help; margin-left: 5px; }
         .tooltip .tooltiptext {
             visibility: hidden; width: 250px; background-color: var(--card-bg); color: var(--text-main); text-align: left;
@@ -83,7 +80,6 @@
     <div class="container">
         <h1>Gas Price Tracker</h1>
         
-        <!-- Skeleton Loader (Visible by default) -->
         <div id="skeleton-container">
             <div class="cards-container">
                 <div class="skeleton skeleton-card"></div>
@@ -94,7 +90,6 @@
             <div class="skeleton skeleton-chart"></div>
         </div>
 
-        <!-- Real Content (Hidden by default) -->
         <div id="real-content" style="display:none;">
             <div id="cards" class="cards-container">
                 <div class="card">
@@ -112,9 +107,9 @@
                         Weekly Forecast (Thu)
                         <span class="tooltip">ⓘ
                             <span class="tooltiptext">
-                                <div class="tooltip-header">Forecast Logic</div>
-                                NB prices are set based on the average benchmark price from Wednesday to Tuesday. This forecast compares the current cycle's average to the previous week's.
-                                <div class="disclaimer">Disclaimer: This is an automated estimate for informational purposes only. Actual regulated prices are determined by the NB EUB and may vary.</div>
+                                <div class="tooltip-header">Forecast Info</div>
+                                This estimate is based on the difference between the current week's market average and previous weeks' historical data.
+                                <div class="disclaimer">Note: Automated prediction for informational purposes only. Actual prices are set by the NB EUB and may vary.</div>
                             </span>
                         </span>
                     </div>
@@ -135,16 +130,16 @@
             
             <div id="chart"></div>
 
-            <!-- Data Sources & Methodology Footer -->
+            <!-- Simplified Footer -->
             <div class="footer" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-sub); line-height: 1.6;">
-                <div style="margin-bottom: 10px;">
+                <div style="margin-bottom: 8px;">
                     <b>Data Sources:</b> 
                     <a href="https://nbeub.ca/current-petroleum-prices-2" target="_blank" style="color: #d94e5d; text-decoration: none;">NB EUB Official</a> &bull; 
-                    <a href="https://finance.yahoo.com/quote/RB=F/" target="_blank" style="color: #3498db; text-decoration: none;">NYMEX RBOB via Yahoo</a>
+                    <a href="https://finance.yahoo.com/quote/RB=F/" target="_blank" style="color: #3498db; text-decoration: none;">Market Benchmarks</a>
                 </div>
                 <div>
-                    <b>Forecast Methodology:</b> Calculated using the "Stable Spread Model" which benchmarks current market trends against the 4-week historical average retail margin. 
-                    <span style="color: var(--text-main); font-weight: 600;">Disclaimer: This is an automated estimate for informational purposes only. Actual regulated prices are determined by the NB EUB and may vary.</span>
+                    <b>Disclaimer:</b> Forecasts are calculated based on current international market trends and historical pricing patterns. 
+                    <span style="color: var(--text-main); font-weight: 600;">Results are estimates and should be used for reference only. The NB EUB maintains final authority over all regulated prices.</span>
                 </div>
             </div>
         </div>
@@ -177,7 +172,6 @@
         fetch('data.json')
             .then(response => response.json())
             .then(data => {
-                // Switch from Skeleton to Real Content
                 document.getElementById('skeleton-container').style.display = 'none';
                 document.getElementById('real-content').style.display = 'block';
                 myChart.resize();
@@ -211,15 +205,7 @@
                 var option = {
                     backgroundColor: 'transparent',
                     tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
-                    legend: { 
-                        data: ['NB Price', 'NYMEX RBOB', 'Retail Spread'], 
-                        top: '0%', 
-                        textStyle: { color: isDarkMode ? '#aaa' : '#333' },
-                        // P3: Chart Noise Reduction - Default hide Retail Spread
-                        selected: {
-                            'Retail Spread': false
-                        }
-                    },
+                    legend: { data: ['NB Price', 'NYMEX RBOB', 'Retail Spread'], top: '0%', textStyle: { color: isDarkMode ? '#aaa' : '#333' }, selected: { 'Retail Spread': false } },
                     grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
                     xAxis: { type: 'category', boundaryGap: false, data: data.dates },
                     yAxis: [
