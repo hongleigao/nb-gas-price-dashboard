@@ -48,8 +48,7 @@ def get_existing_data():
 
 def update_gas_data():
     try:
-        # [核心修复 1] 强制锁定 NB 当地今天，防止 UTC 导致日期超前
-        # NB 通常使用 America/Moncton 或 America/Halifax 时区
+        # [时区锁定] 确保以 NB 当地时间为准
         nb_now = pd.Timestamp.now(tz='America/Moncton')
         today = nb_now.normalize().tz_localize(None)
         print(f"Current NB Date: {today.strftime('%Y-%m-%d')}")
@@ -71,16 +70,14 @@ def update_gas_data():
         df_nb_official['Date'] = pd.to_datetime(df_nb_official['Date'], errors='coerce')
         df_nb_official['NB_Price'] = pd.to_numeric(df_nb_official['NB_Price'], errors='coerce')
         
-        # 移除空值并排序
+        # 捕捉所有变动点，严格剔除未来日期
         df_nb_official = df_nb_official.dropna().sort_values('Date').reset_index(drop=True)
-        # [核心修复 2] 严格过滤掉任何未来的 NB 官方日期（防止 Excel 里的 typo 或占位符）
         df_nb_official = df_nb_official[df_nb_official['Date'] <= today]
         
         print("2. 执行增量合并与时间轴填充...")
         df_old = get_existing_data()
         
         df_nb_official.set_index('Date', inplace=True)
-        # 确保时间轴停止在 NB 当地今天
         full_range = pd.date_range(start=df_nb_official.index.min(), end=today, freq='D')
         df_nb_ext = df_nb_official.reindex(full_range).ffill()
         df_nb_ext.index.name = 'Date'
@@ -88,7 +85,6 @@ def update_gas_data():
 
         print("3. 获取金融数据 (增量抓取)...")
         fetch_start = (today - pd.Timedelta(days=settings.INCREMENTAL_FETCH_DAYS)).strftime('%Y-%m-%d')
-        # YFinance 的 end 是 exclusive，所以使用 today + 1 是为了抓到 today 的收盘价
         yf_end = (today + pd.Timedelta(days=1)).strftime('%Y-%m-%d')
         
         rbob = yf.download(settings.TICKER_RBOB, start=fetch_start, end=yf_end)['Close']
@@ -104,12 +100,10 @@ def update_gas_data():
         cad['Date'] = pd.to_datetime(cad['Date']).dt.tz_localize(None)
         
         df_new_finance = pd.merge(rbob, cad, on='Date', how='inner')
-        # 仅保留交易日计算均值和 Delta
         df_trading_days = df_new_finance[df_new_finance['Date'].dt.dayofweek < 5].copy()
         df_trading_days['RBOB_CAD_Cents_Liter'] = (df_trading_days['RBOB_USD_G'] * df_trading_days['CAD_Rate'] / settings.GALLON_TO_LITER) * 100
         
         real_nymex_delta = float(df_trading_days['RBOB_CAD_Cents_Liter'].diff().round(1).iloc[-1]) if len(df_trading_days) > 1 else 0.0
-        
         df_finance_to_merge = df_trading_days[['Date', 'RBOB_CAD_Cents_Liter']]
 
         if df_old is not None:
@@ -119,7 +113,6 @@ def update_gas_data():
             df_finance_combined = df_finance_to_merge 
 
         df_final = pd.merge(df_nb_ext, df_finance_combined, on='Date', how='left')
-        # [核心修复 3] 严格过滤，确保最终合并后的数据不会超过 NB 当地今天
         df_final = df_final[df_final['Date'] <= today]
         df_final['RBOB_CAD_Cents_Liter'] = df_final['RBOB_CAD_Cents_Liter'].ffill().bfill().round(1)
         
@@ -129,24 +122,28 @@ def update_gas_data():
         df_final = df_final[df_final['Date'] >= (today - pd.Timedelta(days=settings.ROLLING_WINDOW_DAYS))]
         latest = df_final.iloc[-1]
 
-        # P2-Core: 升级版预测模型 (Beta 0.48)
-        change_days = df_final[df_final['NB_Delta'] != 0].tail(4)
-        avg_historical_spread = change_days['Spread'].mean() if not change_days.empty else latest['Spread']
+        # P2-Core & P3: 统计模型
+        # 1. 识别过去 8 个调价日
+        change_days = df_final[df_final['NB_Delta'] != 0].tail(8)
+        # 使用 8 周中位数作为“常态基准”
+        median_historical_spread = change_days['Spread'].median() if not change_days.empty else latest['Spread']
         
+        # 2. 预测计算 (Beta 0.48)
         last_wed = today - pd.Timedelta(days=(today.weekday() - 2) % 7)
         curr_cycle_trading = df_final[(df_final['Date'] >= last_wed) & (df_final['Date'].dt.dayofweek < 5)]
         curr_avg = curr_cycle_trading['RBOB_CAD_Cents_Liter'].mean() if not curr_cycle_trading.empty else latest['RBOB_CAD_Cents_Liter']
         
         BETA = 0.48
-        raw_pred_change = (curr_avg + avg_historical_spread) - latest['NB_Price']
-        calibrated_change = raw_pred_change * BETA
+        # 注意：预测模型现在也基于 8 周中位基准，更具抗干扰性
+        predicted_nb_price = curr_avg + median_historical_spread
+        calibrated_change = (predicted_nb_price - latest['NB_Price']) * BETA
         
-        spread_vs_avg = latest['Spread'] - avg_historical_spread
+        # 3. 市场偏差分析
+        spread_vs_median = latest['Spread'] - median_historical_spread
         spread_series = df_final['Spread'].dropna()
         percentile = (spread_series < latest['Spread']).mean() * 100 if not spread_series.empty else 50.0
 
         print("4. 构建输出并保存...")
-        # 统一使用 AST 时间戳
         ast_now_str = nb_now.strftime('%Y-%m-%d %H:%M:%S AST')
         
         output_data = {
@@ -158,7 +155,7 @@ def update_gas_data():
                 "current_nymex_price": float(latest['RBOB_CAD_Cents_Liter']),
                 "nymex_delta": real_nymex_delta,
                 "current_spread": float(latest['Spread']),
-                "spread_vs_avg": round(spread_vs_avg, 1),
+                "spread_vs_avg": round(spread_vs_median, 1), # 改为 VS 中位数
                 "spread_percentile": round(percentile, 1),
                 "prediction": { 
                     "change": round(calibrated_change, 1), 
@@ -174,7 +171,7 @@ def update_gas_data():
         validate_data(output_data)
         with open(settings.DATA_FILE, 'w') as f:
             json.dump(output_data, f)
-        print(f"更新成功。Today was: {today.strftime('%Y-%m-%d')}")
+        print(f"更新完成。预测变动: {calibrated_change:.1f}¢ (基于8周中位基准)")
 
     except Exception as e:
         print(f"❌ 关键错误: {e}")

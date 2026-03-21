@@ -41,7 +41,8 @@
         .card:hover { transform: translateY(-3px); }
         .card-label { font-size: 11px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 8px; font-weight: 600; }
         .card-value { font-size: 30px; font-weight: 800; color: var(--text-main); }
-        .card-delta { font-size: 14px; margin-top: 6px; font-weight: 600; }
+        .card-delta { font-size: 13px; margin-top: 6px; font-weight: 600; }
+        .card-meta { font-size: 11px; color: var(--text-sub); margin-top: 4px; }
         
         .card-prediction { border-top: 4px solid #3498db; background: rgba(52, 152, 219, 0.05); }
         .pred-up { color: #d94e5d; }
@@ -120,6 +121,7 @@
                     <div class="card-label">Retail Spread</div>
                     <div id="spread-val" class="card-value">--</div>
                     <div id="spread-vs-avg" class="card-delta">--</div>
+                    <div id="spread-pct" class="card-meta">--</div>
                 </div>
             </div>
 
@@ -130,7 +132,6 @@
             
             <div id="chart"></div>
 
-            <!-- Simplified Footer -->
             <div class="footer" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-sub); line-height: 1.6;">
                 <div style="margin-bottom: 8px;">
                     <b>Data Sources:</b> 
@@ -164,9 +165,9 @@
         }
 
         function formatSpreadDelta(val) {
-            if (val > 0.5) return `<span class="delta-up">▲ +${val.toFixed(1)} (Thick Margin)</span>`;
-            if (val < -0.5) return `<span class="delta-down">▼ ${val.toFixed(1)} (Thin Margin)</span>`;
-            return `<span class="delta-neutral">-- Stable Margin</span>`;
+            if (val > 0.5) return `<span class="delta-up">▲ +${val.toFixed(1)} (Thick)</span>`;
+            if (val < -0.5) return `<span class="delta-down">▼ ${val.toFixed(1)} (Thin)</span>`;
+            return `<span class="delta-neutral">-- Stable</span>`;
         }
 
         fetch('data.json')
@@ -182,7 +183,10 @@
                     document.getElementById('nymex-val').innerText = data.metadata.current_nymex_price.toFixed(1) + " ¢";
                     document.getElementById('nymex-delta').innerHTML = formatDelta(data.metadata.nymex_delta);
                     document.getElementById('spread-val').innerText = data.metadata.current_spread.toFixed(1) + " ¢";
+                    
+                    // P3 Update: Median-based spread analysis
                     document.getElementById('spread-vs-avg').innerHTML = formatSpreadDelta(data.metadata.spread_vs_avg);
+                    document.getElementById('spread-pct').innerText = `Higher than ${data.metadata.spread_percentile}% of history`;
                     
                     const pred = data.metadata.prediction;
                     const absChange = Math.abs(pred.change).toFixed(1);
