@@ -1,67 +1,62 @@
-# NB Gas Price Dashboard - 部署与运维实战指南
+# NB Gas Price Dashboard - 部署与运维实战指南 (V4.0)
 
-本指南面向开发者及维护者，详细说明如何管理本项目、配置自动化流程以及通过 Cloudflare 发布。本项目采用 **“代码与数据分离”** 架构，从根本上杜绝了 Git 推送冲突。
-
----
-
-## 一、 开发与代码同步 (GitHub main 分支)
-
-所有代码层面的修改（`.py`, `.html`, `.yml`, `.py`）均在 `main` 分支进行。
-
-1.  **本地运行验证**：
-    ```powershell
-    python update_data.py
-    ```
-2.  **推送代码**：
-    ```powershell
-    git add .
-    git commit -m "Your message"
-    git push origin main
-    ```
-    *注：由于新架构采用了独立的数据分支，您推送到 main 时永远不会再遇到 [rejected] 冲突。*
+本项目采用 **“代码与数据分离”** 的专业级架构，彻底解决了手动代码维护与自动化数据更新之间的推送冲突。
 
 ---
 
-## 二、 自动化与权限配置 (GitHub Actions)
+## 一、 GitHub 核心配置 (必须完成)
 
-为了让机器人每天凌晨 4 点 (AST) 自动抓取数据，必须确保以下权限已开启：
-
-1.  进入 GitHub 仓库 -> **Settings** -> **Actions** -> **General**。
+### 1. 开启自动化写权限
+为了让机器人能将生成的 `data.json` 推送到 `gh-pages` 分支：
+1.  进入仓库 **Settings** -> **Actions** -> **General**。
 2.  在 **Workflow permissions** 中，选择 **"Read and write permissions"**。
 3.  点击 **Save**。
 
-*机器人会将运行结果（index.html 和 data.json）自动推送到 **gh-pages** 分支。*
+### 2. 激活 gh-pages 分支
+1.  点击顶部 **Actions** 选项卡。
+2.  选择 **Update Gas Data and Deploy** 工作流。
+3.  点击右侧 **Run workflow** 下拉按钮并执行。
+4.  运行成功后，仓库会自动创建一个 `gh-pages` 分支。
 
 ---
 
-## 三、 线上托管配置 (Cloudflare Pages)
+## 二、 Cloudflare Pages 全自动上线
 
-我们使用 Cloudflare Pages 实现全球分发和自动更新。
-
-1.  **创建应用**：在 Cloudflare 控制台选择 **Workers & Pages** -> **Create application** -> **Pages** -> **Connect to Git**。
+1.  **关联仓库**：在 Cloudflare Pages 菜单选择 **Connect to Git**。
 2.  **关键构建设置 (Build Settings)**：
-    *   **Production branch**: 必须选择 **`gh-pages`**。
+    *   **Production branch**: 必须手动修改为 **`gh-pages`**。
     *   **Framework preset**: 选 `None`。
-    *   **Build command**: (保持为空)。
-    *   **Build output directory**: 输入一个点 **`.`**。
-3.  **自定义域名**：在 **Custom domains** 选项卡中添加您的子域名（如 `gas.jgao.app`）。
+    *   **Build command**: 保持 **留空** (脚本在 GitHub 已跑完)。
+    *   **Build output directory**: 填写一个点 **`.`**。
+3.  **自动部署**：一旦配置完成，未来您在 `main` 分支推代码，Cloudflare 会在 1 分钟内同步更新结果。
 
 ---
 
-## 四、 常见问题排查 (Troubleshooting)
+## 三、 专家级冲突解决：Git Pull Rebase
 
-### 1. 网页内容显示旧数据或 -- 0.0？
-*   **原因**：本地 `data.json` 仍是旧逻辑生成的版本。
-*   **解决**：在本地运行 `python update_data.py`，确认 `nymex_delta` 不为 0.0，然后执行 `git add .`, `git commit`, `git push`。机器人会自动在 `gh-pages` 分支覆盖掉坏数据。
+如果因为机器人运行导致您在 `main` 分支推送失败（尽管几率已极低），请执行：
 
-### 2. Cloudflare 部署显示 "Skipped"？
-*   **原因**：提交消息中包含了 `[skip ci]` 标签。
-*   **解决**：我们已在最新的 `main.yml` 中移除了此标签。请确保您的本地 `.github/workflows/main.yml` 是最新版。
+1.  **撤销任何卡住的状态**：`git rebase --abort`
+2.  **强行对齐云端数据**：
+    ```powershell
+    git pull origin main --rebase -X ours
+    ```
+    *注：这会保留您的本地代码修改，同时吸纳云端由于自动更新产生的 data.json 变动。*
+3.  **重新生成数据并推送**：
+    ```powershell
+    python update_data.py
+    git add .
+    git commit -m "Fix: Synced logic and data"
+    git push origin main
+    ```
 
-### 3. 如何在手机上安装？
-*   使用手机浏览器（Safari 或 Chrome）访问您的域名。
-*   点击 **“分享”** 图标（iOS）或 **“菜单”** 图标（Android）。
-*   选择 **“添加到主屏幕 (Add to Home Screen)”**。
+---
+
+## 四、 常见运维排障
+
+*   **Cloudflare 部署显示 Skipped**：检查 `.github/workflows/main.yml` 是否已移除 `[skip ci]` 标签。当前版本已移除此标签以确保部署。
+*   **本地报错 ModuleNotFoundError**：执行 `pip install pandas yfinance xlrd openpyxl`。
+*   **数据显示超前一天**：确保 `update_data.py` 中的 `America/Moncton` 时区锁定代码未被修改。
 
 ---
 祝您的油价监控平台运行顺利！
