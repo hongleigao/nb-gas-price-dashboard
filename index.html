@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NB Gas Pulse // Institutional Analytics</title>
+    <title>NB Gas Pulse // Fuel Intelligence</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#05070a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,27 +13,32 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <style>
         :root {
-            --bg-color: #0f172a;
-            --surface-bg: #1e293b;
-            --text-main: #f8fafc;
-            --text-sub: #94a3b8;
-            --accent-bronze: #d4af37;
-            --accent-blue: #38bdf8;
-            --border-color: rgba(148, 163, 184, 0.15);
-            --danger: #f87171;
-            --success: #4ade80;
+            --bg-color: #05070a;
+            --surface-bg: #0d1117;
+            --text-main: #ffffff;
+            --text-sub: #6e7681;
+            --accent-blue: #00d1ff;
+            --accent-green: #3fb950;
+            --accent-red: #f85149;
+            --border-color: #30363d;
             --font-display: 'Playfair Display', serif;
             --font-body: 'Outfit', sans-serif;
         }
 
         body { 
-            margin: 0; 
-            padding: 0; 
+            margin: 0; padding: 0; 
             font-family: var(--font-body); 
             background-color: var(--bg-color); 
             color: var(--text-main);
             -webkit-font-smoothing: antialiased;
         }
+
+        .status-dot {
+            display: inline-block; width: 6px; height: 6px; background: var(--accent-green); 
+            border-radius: 50%; margin-right: 8px; vertical-align: middle;
+            box-shadow: 0 0 8px var(--accent-green); animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
         .top-bar {
             border-bottom: 1px solid var(--border-color);
@@ -45,18 +50,12 @@
             text-transform: uppercase;
             letter-spacing: 0.15em;
             color: var(--text-sub);
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(5, 7, 10, 0.8);
             backdrop-filter: blur(10px);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            position: sticky; top: 0; z-index: 100;
         }
 
-        .container { 
-            max-width: 1200px; 
-            margin: 40px auto; 
-            padding: 0 40px;
-        }
+        .container { max-width: 1200px; margin: 40px auto; padding: 0 40px; }
 
         header {
             margin-bottom: 60px;
@@ -67,25 +66,16 @@
             padding-bottom: 20px;
         }
 
-        h1 { 
-            font-family: var(--font-display); 
-            font-size: 56px; 
-            margin: 0; 
-            font-weight: 700;
-            line-height: 1;
+        h1 { font-family: var(--font-display); font-size: 56px; margin: 0; font-weight: 700; line-height: 1; }
+
+        .market-status { text-align: right; }
+
+        .label {
+            font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em;
+            color: var(--text-sub); margin-bottom: 20px; display: block; font-weight: 600;
         }
 
-        .market-status {
-            text-align: right;
-            font-family: var(--font-body);
-        }
-
-        .grid-layout {
-            display: grid;
-            grid-template-columns: 1.5fr 1fr;
-            gap: 40px;
-            margin-bottom: 60px;
-        }
+        .grid-layout { display: grid; grid-template-columns: 1.5fr 1fr; gap: 40px; margin-bottom: 60px; }
 
         .summary-card {
             background: var(--surface-bg);
@@ -93,90 +83,60 @@
             padding: 40px;
             position: relative;
             overflow: hidden;
+            border-left: 4px solid var(--border-color); /* 默认无色 */
+            transition: border-left-color 0.5s ease;
         }
 
-        .summary-card::before {
-            content: ""; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--accent-bronze);
-        }
+        .summary-card.trend-up { border-left-color: var(--accent-red); }
+        .summary-card.trend-down { border-left-color: var(--accent-green); }
+        .summary-card.trend-stable { border-left-color: var(--accent-blue); }
 
-        .label {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.2em;
-            color: var(--text-sub);
-            margin-bottom: 20px;
-            display: block;
-            font-weight: 600;
-        }
-
-        .decision-badge {
-            display: inline-block;
-            padding: 6px 16px;
-            border: 1px solid currentColor;
-            font-size: 13px;
-            font-weight: 700;
-            margin-bottom: 30px;
-            border-radius: 0;
-        }
-
-        .main-value {
-            font-family: var(--font-display);
-            font-size: 84px;
-            font-weight: 800;
-            margin: 0;
-            line-height: 1;
-        }
-
-        .metrics-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .metric-row {
-            background: rgba(255,255,255,0.03);
+        .price-beacon {
+            display: flex; flex-direction: column; gap: 10px; padding: 25px;
             border: 1px solid var(--border-color);
-            padding: 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            background: linear-gradient(145deg, #0d1117 0%, #05070a 100%);
+            /* 移除左侧强制蓝线 */
         }
 
-        .metric-info h3 {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-sub);
-            margin: 0 0 8px 0;
-        }
+        .price-item { display: flex; justify-content: space-between; align-items: baseline; }
+        .price-label { font-size: 11px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; }
+        .price-val-main { font-family: var(--font-display); font-size: 42px; font-weight: 700; color: var(--text-main); }
+        .price-val-sub { font-family: var(--font-body); font-size: 24px; font-weight: 500; color: var(--text-sub); }
 
-        .metric-value {
-            font-family: var(--font-display);
-            font-size: 28px;
-            font-weight: 700;
-        }
-
-        .chart-section {
-            background: var(--surface-bg);
+        .insight-hub {
+            display: flex; flex-direction: column; gap: 25px; padding: 25px;
+            background: rgba(255,255,255,0.02);
             border: 1px solid var(--border-color);
-            padding: 30px;
-            margin-bottom: 60px;
+            border-radius: 4px;
         }
 
+        .attribution-viz { padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .attr-bar-container { height: 4px; background: rgba(255,255,255,0.05); margin: 12px 0; border-radius: 2px; }
+        .attr-bar-fill { height: 100%; border-radius: 2px; transition: width 1s; }
+        .driver-text { font-size: 13px; font-style: italic; color: var(--accent-blue); margin-top: 15px; }
+
+        .risk-gauge { width: 100%; height: 8px; background: rgba(255,255,255,0.05); margin: 20px 0; border-radius: 4px; overflow: hidden; position: relative; }
+        .risk-marker { height: 100%; width: 0%; transition: width 1s, background 1s; border-radius: 4px; }
+
+        .progress-container { height: 2px; background: rgba(255,255,255,0.1); margin-top: 15px; width: 100%; }
+        .progress-bar { height: 100%; background: var(--accent-blue); transition: width 1.5s ease-out; }
+
+        .pro-toggle {
+            background: none; border: 1px solid var(--border-color); color: var(--text-sub); padding: 8px 16px; font-size: 11px; 
+            text-transform: uppercase; cursor: pointer; transition: all 0.3s; margin-top: 20px;
+        }
+        .pro-toggle:hover { border-color: var(--accent-blue); color: var(--text-main); }
+
+        .pro-content { display: none; margin-top: 40px; animation: fadeIn 0.5s ease-out; }
+        .chart-section { background: var(--surface-bg); border: 1px solid var(--border-color); padding: 30px; }
         #chart { width: 100%; height: 500px; }
 
-        footer {
-            border-top: 1px solid var(--border-color);
-            padding: 40px 0 80px 0;
-            font-size: 12px;
-            color: var(--text-sub);
-            line-height: 1.8;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .disclaimer { font-style: italic; opacity: 0.7; }
+        footer {
+            border-top: 1px solid var(--border-color); padding: 40px 0 80px 0; font-size: 12px; color: var(--text-sub); line-height: 1.8;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 40px;
+        }
 
         @media (max-width: 992px) {
             .grid-layout, footer { grid-template-columns: 1fr; }
@@ -184,59 +144,39 @@
             .main-value { font-size: 64px; }
             .container { padding: 0 20px; }
         }
-
-        .risk-gauge {
-            width: 100%; height: 8px; background: rgba(255,255,255,0.05); margin: 20px 0; border-radius: 4px; overflow: hidden; position: relative;
-        }
-        .risk-marker {
-            height: 100%; width: 0%; transition: width 1s, background 1s; border-radius: 4px;
-        }
-        .attribution-box {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 30px; padding-top: 20px; border-top: 1px dashed var(--border-color);
-        }
-        .attr-item { font-size: 13px; color: var(--text-sub); }
-        .attr-val { font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--text-main); margin-top: 5px; }
-        
-        .pro-toggle {
-            background: none; border: 1px solid var(--border-color); color: var(--text-sub); padding: 8px 16px; font-size: 11px; 
-            text-transform: uppercase; cursor: pointer; transition: all 0.3s; margin-top: 20px;
-        }
-        .pro-toggle:hover { border-color: var(--accent-blue); color: var(--text-main); }
-        .pro-content { display: none; margin-top: 30px; animation: fadeIn 0.5s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
     <div class="top-bar">
-        <div>Network Protocol: <span id="sync-status">Syncing...</span></div>
-        <div>NB Gas Pulse // <span id="price-status">Loading</span></div>
+        <div><span class="status-dot"></span>LIVE DATA // <span id="sync-status">Updating...</span></div>
+        <div>New Brunswick, Canada // <span id="location-time">---</span></div>
     </div>
 
     <div class="container">
         <header>
             <h1>NB Gas Pulse</h1>
             <div class="market-status">
-                <div class="label">Analysis Update</div>
-                <div id="current-date" style="font-size: 14px; font-weight: 600;">--</div>
+                <div class="label">Effective Since</div>
+                <div id="current-date" style="font-size: 14px; font-weight: 600; color: var(--accent-blue);">--</div>
             </div>
         </header>
 
         <div id="skeleton-container" class="grid-layout">
-            <div class="summary-card" style="height: 400px; opacity: 0.5;"></div>
-            <div class="metrics-panel" style="height: 400px; opacity: 0.5;"></div>
+            <div class="summary-card" style="height: 500px; opacity: 0.3;"></div>
+            <div class="metrics-panel" style="height: 500px; opacity: 0.3;"></div>
         </div>
 
         <div id="real-content" style="display:none;">
             <div class="grid-layout">
                 <section class="summary-card">
-                    <div id="decision-text" class="decision-badge">Analyzing Market Intelligence</div>
-                    <div class="label">Projected Change (Next Thu)</div>
+                    <div id="decision-text" class="decision-badge">Analyzing Intelligence</div>
+                    <div class="label">Projected Variation (Next Fri)</div>
                     <h2 id="pred-val" class="main-value">--</h2>
                     
                     <div class="risk-gauge">
                         <div id="risk-fill" class="risk-marker"></div>
                     </div>
-                    <div id="risk-label" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-sub);">Interrupter Risk: Low</div>
+                    <div id="risk-label" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-sub);">Interrupter Risk: Nominal</div>
 
                     <div id="pred-direction" style="margin-top: 25px; font-weight: 400; font-size: 15px; line-height: 1.6; color: var(--text-sub);">--</div>
                     
@@ -244,33 +184,47 @@
                 </section>
 
                 <aside class="metrics-panel">
-                    <div class="metric-row">
-                        <div class="metric-info">
-                            <h3>Current EUB Maximum</h3>
-                            <div id="nb-val" class="metric-value">--</div>
+                    <!-- 双价格灯塔 -->
+                    <div class="price-beacon">
+                        <div class="price-item">
+                            <span class="price-label">Pump Price (Est.)</span>
+                            <span id="pump-val" class="price-val-main">--</span>
                         </div>
-                        <div id="nb-delta" style="font-weight: 700;">--</div>
+                        <div class="price-item" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+                            <span class="price-label">EUB Max Ceiling</span>
+                            <span id="nb-val" class="price-val-sub">--</span>
+                        </div>
+                        <div id="nb-delta" style="font-size: 12px; font-weight: 700; text-align: right; margin-top: 5px;">--</div>
                     </div>
                     
-                    <div class="metric-row" style="flex-direction: column; align-items: flex-start; background: rgba(56, 189, 248, 0.03);">
-                        <div class="metric-info">
-                            <h3>Calculation Window Progress</h3>
-                            <div id="window-locked-text" style="font-family: var(--font-display); font-size: 24px; font-weight: 700; margin-top: 5px;">--</div>
+                    <!-- 预测分析舱 (Insight Hub) -->
+                    <div class="insight-hub">
+                        <div class="attribution-viz">
+                            <div class="label" style="margin-bottom: 15px; font-size: 10px;">Price Driver Analysis</div>
+                            <div class="attr-item" style="font-size: 13px;">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: var(--text-sub);">Global Market</span>
+                                    <span id="attr-comm" style="font-weight: 600;">--</span>
+                                </div>
+                                <div class="attr-bar-container"><div id="bar-comm" class="attr-bar-fill"></div></div>
+                            </div>
+                            <div class="attr-item" style="font-size: 13px; margin-top: 15px;">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: var(--text-sub);">Currency (CAD)</span>
+                                    <span id="attr-fx" style="font-weight: 600;">--</span>
+                                </div>
+                                <div class="attr-bar-container"><div id="bar-fx" class="attr-bar-fill"></div></div>
+                            </div>
+                            <div id="driver-summary" class="driver-text">--</div>
                         </div>
-                        <div class="progress-container" style="background: rgba(56, 189, 248, 0.1);">
-                            <div id="window-fill" class="progress-bar" style="width: 0%; background: var(--accent-blue);"></div>
-                        </div>
-                        <div style="font-size: 10px; margin-top: 10px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.05em;">Based on T-8 to T-2 benchmark cycle</div>
-                    </div>
 
-                    <div id="attribution-section" class="attribution-box">
-                        <div class="attr-item">
-                            COMMODITY
-                            <div id="attr-comm" class="attr-val">--</div>
-                        </div>
-                        <div class="attr-item">
-                            FX IMPACT
-                            <div id="attr-fx" class="attr-val">--</div>
+                        <div class="confidence-box">
+                            <h3 id="confidence-level" style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-sub); margin: 0 0 10px 0;">Data Confidence</h3>
+                            <div id="window-locked-text" style="font-family: var(--font-display); font-size: 24px; font-weight: 700;">--</div>
+                            <div class="progress-container" style="margin-top: 10px;">
+                                <div id="window-fill" class="progress-bar" style="width: 0%;"></div>
+                            </div>
+                            <div id="window-explanation" style="font-size: 10px; margin-top: 12px; color: var(--text-sub); line-height: 1.4; text-transform: uppercase; letter-spacing: 0.5px;">--</div>
                         </div>
                     </div>
                 </aside>
@@ -285,19 +239,23 @@
 
             <footer>
                 <div>
-                    <div class="label">Data Governance</div>
-                    <p>Information is aggregated from the New Brunswick Energy and Utilities Board (NB EUB) and institutional financial benchmarks. Accuracy is prioritized but not guaranteed.</p>
-                    <p>&copy; 2026 NB Gas Pulse Intelligence. Institutional Grade Analysis.</p>
+                    <div class="label">Data Source</div>
+                    <p>Aggregated from the New Brunswick Energy and Utilities Board (NB EUB) and international market benchmarks.</p>
+                    <p>&copy; 2026 NB Gas Pulse</p>
                 </div>
                 <div class="disclaimer">
-                    <div class="label">Disclaimer</div>
-                    Forecasts are generated through a beta-calibrated statistical model (M7). The NB EUB maintains absolute statutory authority over final maximum pricing. Users are advised to verify data before significant financial commitments.
+                    <div class="label">Legal Notice</div>
+                    Predictions are calculated using the 5-day market window methodology employed by provincial regulators. The NB EUB maintains final statutory authority over all maximum fuel pricing in New Brunswick.
                 </div>
             </footer>
         </div>
     </div>
 
     <script>
+        var myChart;
+        var chartData = null;
+        const API_ENDPOINT = 'https://nb-gas-pulse-api.honglei-gao.workers.dev/';
+
         function toggleProMode() {
             const content = document.getElementById('pro-mode-content');
             const btn = document.querySelector('.pro-toggle');
@@ -307,11 +265,14 @@
             } else {
                 content.style.display = 'block';
                 btn.innerText = 'Collapse Details';
-                if (myChart) myChart.resize();
+                setTimeout(() => {
+                    initChart();
+                    if (myChart) myChart.resize();
+                }, 100);
             }
         }
 
-        function animateValue(id, start, end, duration, suffix = "") {
+        function animateValue(id, start, end, duration, suffix = "", showSymbol = false) {
             const obj = document.getElementById(id);
             if (!obj) return;
             let startTimestamp = null;
@@ -319,114 +280,132 @@
                 if (!startTimestamp) startTimestamp = timestamp;
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
                 const current = (progress * (end - start) + start);
-                obj.innerText = (current > 0 ? "+" : "") + current.toFixed(1) + suffix;
+                let sign = "";
+                if (showSymbol && current > 0.05) sign = "+";
+                obj.innerText = sign + current.toFixed(1) + suffix;
                 if (progress < 1) window.requestAnimationFrame(step);
             };
             window.requestAnimationFrame(step);
         }
 
-        var myChart;
-        const API_ENDPOINT = 'https://nb-gas-pulse-api.honglei-gao.workers.dev/';
+        function initChart() {
+            if (!chartData || !document.getElementById('chart')) return;
+            if (!myChart) myChart = echarts.init(document.getElementById('chart'), 'dark');
+            
+            const markPoints = [];
+            const nb_prices = chartData.nb_prices || [];
+            for (let i = 1; i < nb_prices.length; i++) {
+                if (nb_prices[i] !== nb_prices[i-1]) {
+                    markPoints.push({ coord: [i, nb_prices[i]], symbolSize: 6, itemStyle: { color: '#f85149' } });
+                }
+            }
+
+            myChart.setOption({
+                backgroundColor: 'transparent',
+                tooltip: { trigger: 'axis', backgroundColor: '#0d1117', borderColor: '#30363d', textStyle: { color: '#ffffff' } },
+                legend: { bottom: '0%', textStyle: { color: '#6e7681' } },
+                grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
+                dataZoom: [{ type: 'inside', start: 85, end: 100 }, { start: 85, end: 100, bottom: 40 }],
+                xAxis: { type: 'category', data: chartData.dates || [], axisLine: { lineStyle: { color: '#30363d' } } },
+                yAxis: [{ type: 'value', scale: true, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } } }],
+                series: [
+                    { name: 'NB Price', type: 'line', step: 'end', data: nb_prices, color: '#f85149', lineStyle: { width: 2 }, markPoint: { symbol: 'circle', data: markPoints } },
+                    { name: 'NYMEX RBOB', type: 'line', smooth: true, data: chartData.nymex_prices || [], color: '#00d1ff', lineStyle: { width: 2 } }
+                ]
+            });
+        }
 
         fetch(API_ENDPOINT)
             .then(res => res.json())
             .then(data => {
+                chartData = data;
                 document.getElementById('skeleton-container').style.display = 'none';
                 document.getElementById('real-content').style.display = 'block';
                 
-                myChart = echarts.init(document.getElementById('chart'), 'dark');
-
                 if (data.metadata) {
                     const m = data.metadata;
                     document.getElementById('current-date').innerText = m.nb_last_date;
-                    
-                    animateValue("nb-val", 0, m.current_nb_price, 1000, " ¢");
-                    document.getElementById('nb-delta').innerHTML = m.nb_delta > 0 ? `<span style="color:var(--danger)">+${m.nb_delta.toFixed(1)}</span>` : (m.nb_delta < 0 ? `<span style="color:var(--success)">${m.nb_delta.toFixed(1)}</span>` : `STABLE`);
+                    animateValue("nb-val", 0, m.current_nb_price, 1000, " ¢", false);
+                    animateValue("pump-val", 0, m.current_nb_price - 5.5, 1000, " ¢", false);
+                    document.getElementById('nb-delta').innerHTML = m.nb_delta > 0 ? `<span style="color:var(--accent-red)">+${m.nb_delta.toFixed(1)}</span>` : (m.nb_delta < 0 ? `<span style="color:var(--accent-green)">${m.nb_delta.toFixed(1)}</span>` : `STABLE`);
                     
                     const p = m.prediction;
+                    const days = p.window.locked_days || 0;
+                    const pct = p.window.progress || 0;
+                    document.getElementById('window-locked-text').innerText = `${days} of 5 days locked`;
+                    setTimeout(() => document.getElementById('window-fill').style.width = pct + "%", 200);
                     
-                    // 1. 计价沙漏
-                    document.getElementById('window-locked-text').innerText = `${p.window.progress}% Locked`;
-                    setTimeout(() => document.getElementById('window-fill').style.width = p.window.progress + "%", 200);
+                    const confEl = document.getElementById('confidence-level');
+                    const explEl = document.getElementById('window-explanation');
+                    if (pct >= 100) { confEl.innerText = "Data Confidence: FINALIZED"; explEl.innerText = "Full cycle complete. Mathematically firm."; }
+                    else if (pct >= 60) { confEl.innerText = "Data Confidence: HIGH"; explEl.innerText = `${days} days fixed. Trend is highly probable.`; }
+                    else { confEl.innerText = "Data Confidence: PREDICTIVE"; explEl.innerText = "Initial data in. High volatility expected."; }
 
-                    // 2. 归因拆解
-                    animateValue("attr-comm", 0, p.attribution.commodity, 1200, " ¢");
-                    animateValue("attr-fx", 0, p.attribution.fx, 1200, " ¢");
+                    const comm = p.attribution.commodity;
+                    const fx = p.attribution.fx;
+                    document.getElementById('attr-comm').innerText = (comm > 0 ? "+" : "") + comm.toFixed(1) + " ¢";
+                    document.getElementById('attr-fx').innerText = (fx > 0 ? "+" : "") + fx.toFixed(1) + " ¢";
+                    const barComm = document.getElementById('bar-comm');
+                    const barFx = document.getElementById('bar-fx');
+                    barComm.style.width = Math.min((Math.abs(comm) / 5.0) * 100, 100) + "%";
+                    barComm.style.background = comm > 0 ? "var(--accent-red)" : "var(--accent-green)";
+                    barFx.style.width = Math.min((Math.abs(fx) / 5.0) * 100, 100) + "%";
+                    barFx.style.background = fx > 0 ? "var(--accent-red)" : "var(--accent-green)";
 
-                    // 3. 熔断风险仪表盘
+                    let summary = "";
+                    if (Math.abs(comm) > Math.abs(fx)) { summary = comm > 0 ? "Global market trend is pushing prices up." : "Global market relief is the primary driver."; }
+                    else { summary = fx > 0 ? "CAD weakness is dragging prices higher." : "Stronger CAD is providing price relief."; }
+                    document.getElementById('driver-summary').innerText = summary;
+
                     const riskFill = document.getElementById('risk-fill');
                     const riskLabel = document.getElementById('risk-label');
                     const riskPct = Math.min((Math.abs(p.accumulated_change) / 6.0) * 100, 100);
                     riskFill.style.width = riskPct + "%";
-                    
-                    if (p.risk_level === 'red') {
-                        riskFill.style.background = "var(--danger)";
-                        riskLabel.innerText = "Interrupter Risk: CRITICAL";
-                        riskLabel.style.color = "var(--danger)";
-                    } else if (p.risk_level === 'yellow') {
-                        riskFill.style.background = "#fbbf24";
-                        riskLabel.innerText = "Interrupter Risk: ELEVATED";
-                        riskLabel.style.color = "#fbbf24";
-                    } else {
-                        riskFill.style.background = "var(--success)";
-                        riskLabel.innerText = "Interrupter Risk: LOW";
-                    }
+                    if (p.risk_level === 'red') { riskFill.style.background = "var(--accent-red)"; riskLabel.innerText = "Interrupter Risk: CRITICAL"; riskLabel.style.color = "var(--accent-red)"; }
+                    else if (p.risk_level === 'yellow') { riskFill.style.background = "#fbbf24"; riskLabel.innerText = "Interrupter Risk: ELEVATED"; riskLabel.style.color = "#fbbf24"; }
+                    else { riskFill.style.background = "var(--accent-green)"; riskLabel.innerText = "Interrupter Risk: LOW"; }
 
-                    // 4. 核心决策结论
-                    const pVal = p.direction === 'stable' ? '0.0' : (p.change > 0 ? '+' : '') + p.change.toFixed(1);
-                    animateValue("pred-val", 0, parseFloat(pVal), 1200, " ¢");
-                    
+                    animateValue("pred-val", 0, parseFloat(p.change), 1200, " ¢", true);
                     const decisionEl = document.getElementById('decision-text');
-                    if (p.risk_level === 'red') {
-                        decisionEl.innerText = "CRITICAL: EMERGENCY ACTION REQUIRED";
-                        decisionEl.style.color = "var(--danger)";
-                        document.getElementById('pred-direction').innerHTML = `Market volatility has breached the ±6¢ interrupter threshold. A non-standard price adjustment is imminent.`;
-                    } else if (p.direction === 'up') {
-                        decisionEl.innerText = "BUY NOW: PRICE SPIKE EXPECTED";
-                        decisionEl.style.color = "var(--danger)";
-                        document.getElementById('pred-direction').innerHTML = `Current metrics indicate significant upward pressure for the upcoming Thursday adjustment. Filling your tank now is advised.`;
-                    } else if (p.direction === 'down') {
-                        decisionEl.innerText = "WAIT: PRICE DROP ANTICIPATED";
-                        decisionEl.style.color = "var(--success)";
-                        document.getElementById('pred-direction').innerHTML = `Downward trend detected in benchmark windows. Deferring acquisition until after Thursday is recommended.`;
-                    } else {
-                        decisionEl.innerText = "MARKET STABLE";
-                        decisionEl.style.color = "var(--text-sub)";
-                        document.getElementById('pred-direction').innerHTML = `No significant deviation detected. Standard market conditions persist.`;
+                    const summaryCard = document.querySelector('.summary-card');
+                    
+                    // 移除旧类名
+                    summaryCard.classList.remove('trend-up', 'trend-down', 'trend-stable');
+
+                    if (p.risk_level === 'red') { 
+                        decisionEl.innerText = "CRITICAL: EMERGENCY ACTION"; 
+                        decisionEl.style.color = "var(--accent-red)"; 
+                        document.getElementById('pred-direction').innerHTML = `Immediate non-standard price hike detected. Fill your tank now.`; 
+                        summaryCard.classList.add('trend-up'); // 熔断通常伴随剧烈上涨
+                    }
+                    else if (p.direction === 'up') { 
+                        decisionEl.innerText = "ADVISORY: BUY BEFORE FRIDAY"; 
+                        decisionEl.style.color = "var(--accent-red)"; 
+                        document.getElementById('pred-direction').innerHTML = `Forecast indicates an upward jump this Friday morning. Pre-emptive fueling recommended.`; 
+                        summaryCard.classList.add('trend-up');
+                    }
+                    else if (p.direction === 'down') { 
+                        decisionEl.innerText = "ADVISORY: WAIT FOR FRIDAY"; 
+                        decisionEl.style.color = "var(--accent-green)"; 
+                        document.getElementById('pred-direction').innerHTML = `Price drop anticipated this Friday morning. Defer purchases until the new ceiling takes effect.`; 
+                        summaryCard.classList.add('trend-down');
+                    }
+                    else { 
+                        decisionEl.innerText = "MARKET NEUTRAL"; 
+                        decisionEl.style.color = "var(--text-sub)"; 
+                        document.getElementById('pred-direction').innerHTML = `Stable pricing expected. No immediate action required.`; 
+                        summaryCard.classList.add('trend-stable');
                     }
 
-                    document.getElementById("sync-status").innerText = "CONNECTED // " + m.last_sync;
-                    document.getElementById("price-status").innerText = m.nb_last_date;
+                    const lastSync = new Date(m.last_sync);
+                    const formattedTime = lastSync.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                    const formattedDate = lastSync.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    document.getElementById("sync-status").innerText = `Synchronized at ${formattedTime}`;
+                    document.getElementById("location-time").innerText = formattedDate;
                 }
-
-                const markPoints = [];
-                const nb_prices = data.nb_prices || [];
-                for (let i = 1; i < nb_prices.length; i++) {
-                    if (nb_prices[i] !== nb_prices[i-1]) {
-                        markPoints.push({ coord: [i, nb_prices[i]], symbolSize: 6, itemStyle: { color: '#f87171' } });
-                    }
-                }
-
-                myChart.setOption({
-                    backgroundColor: 'transparent',
-                    tooltip: { 
-                        trigger: 'axis',
-                        backgroundColor: '#1e293b',
-                        borderColor: 'rgba(255,255,255,0.1)',
-                        textStyle: { color: '#f8fafc', fontFamily: 'Outfit' }
-                    },
-                    legend: { bottom: '0%', textStyle: { color: 'var(--text-sub)', fontFamily: 'Outfit' } },
-                    dataZoom: [{ type: 'inside', start: 0, end: 100 }, { start: 0, end: 100, bottom: 40 }],
-                    xAxis: { type: 'category', data: data.dates || [], axisLine: { lineStyle: { color: 'var(--border-color)' } } },
-                    yAxis: [{ type: 'value', scale: true, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } } }],
-                    series: [
-                        { name: 'NB Price', type: 'line', step: 'end', data: data.nb_prices || [], color: '#f87171', lineStyle: { width: 2 }, markPoint: { symbol: 'circle', data: markPoints } },
-                        { name: 'NYMEX RBOB', type: 'line', smooth: true, data: data.nymex_prices || [], color: '#38bdf8', lineStyle: { width: 2 } }
-                    ]
-                });
             })
             .catch(err => {
-                document.getElementById('skeleton-container').innerHTML = "<p>Data synchronization failure. Please verify connection.</p>";
+                document.getElementById('skeleton-container').innerHTML = "<p>Data synchronization failure.</p>";
                 console.error(err);
             });
 
