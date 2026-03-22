@@ -3,133 +3,295 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NB Gas Price Pulse</title>
+    <title>NB Gas Pulse // Institutional Analytics</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#d94e5d">
+    <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <style>
         :root {
-            --bg-color: #f0f2f5;
-            --container-bg: #ffffff;
-            --text-main: #1a1a1a;
-            --text-sub: #666666;
-            --border-color: #e8e8e8;
-            --card-bg: #ffffff;
-            --hero-bg: linear-gradient(135deg, #2c3e50 0%, #000000 100%);
-            --hero-text: #ffffff;
-            --accent-orange: #f39c12;
-            --skeleton-bg: #e0e0e0;
+            --bg-color: #0f172a;
+            --surface-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --accent-bronze: #d4af37;
+            --accent-blue: #38bdf8;
+            --border-color: rgba(148, 163, 184, 0.15);
+            --danger: #f87171;
+            --success: #4ade80;
+            --font-display: 'Playfair Display', serif;
+            --font-body: 'Outfit', sans-serif;
         }
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg-color: #0a0a0a;
-                --container-bg: #141414;
-                --text-main: #f0f0f0;
-                --text-sub: #888888;
-                --border-color: #262626;
-                --card-bg: #1c1c1c;
-                --hero-bg: linear-gradient(135deg, #1a1a1a 0%, #333333 100%);
-                --skeleton-bg: #262626;
-            }
+
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: var(--font-body); 
+            background-color: var(--bg-color); 
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
         }
-        body { margin: 0; padding: 15px; font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif; background-color: var(--bg-color); color: var(--text-main); }
-        .container { background: var(--container-bg); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); padding: 25px; max-width: 1200px; margin: 0 auto; min-height: 80vh; }
-        h1 { text-align: left; font-size: 24px; margin-bottom: 25px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
-        
-        .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
-        .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; text-align: left; }
-        .card-label { font-size: 10px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; font-weight: 700; }
-        .card-value { font-size: 28px; font-weight: 800; }
-        .card-delta { font-size: 13px; margin-top: 8px; font-weight: 600; }
-        
-        .card-hero { grid-column: span 2; background: var(--hero-bg); color: var(--hero-text); border: none; }
-        .card-hero .card-label { color: rgba(255,255,255,0.6); }
-        .card-hero .card-value { font-size: 42px; }
 
-        .delta-up { color: #ff4d4f; }
-        .delta-down { color: #52c41a; }
-        .delta-neutral { color: var(--text-sub); }
-
-        @keyframes shimmer { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-        .skeleton { background-color: var(--skeleton-bg); border-radius: 12px; animation: shimmer 1.5s infinite; }
-        .skeleton-hero { height: 140px; grid-column: span 2; }
-        .skeleton-small { height: 140px; }
-        .skeleton-chart { height: 500px; width: 100%; margin-top: 20px; }
-
-        #chart { width: 100%; height: 500px; margin-top: 30px; }
-        #status-bar { font-size: 11px; color: var(--text-sub); margin-bottom: 15px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
-
-        @media (max-width: 992px) { .cards-grid { grid-template-columns: repeat(2, 1fr); } }
-        
-        .tooltip { position: relative; display: inline-block; cursor: help; margin-left: 5px; }
-        .tooltip .tooltiptext {
-            visibility: hidden; width: 220px; background-color: #1f1f1f; color: #fff; padding: 12px; border-radius: 8px;
-            position: absolute; z-index: 100; bottom: 125%; left: 0; opacity: 0; transition: opacity 0.3s; font-size: 11px; line-height: 1.4;
+        .top-bar {
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--text-sub);
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+
+        .container { 
+            max-width: 1200px; 
+            margin: 40px auto; 
+            padding: 0 40px;
+        }
+
+        header {
+            margin-bottom: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 2px solid var(--text-main);
+            padding-bottom: 20px;
+        }
+
+        h1 { 
+            font-family: var(--font-display); 
+            font-size: 56px; 
+            margin: 0; 
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .market-status {
+            text-align: right;
+            font-family: var(--font-body);
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 40px;
+            margin-bottom: 60px;
+        }
+
+        .summary-card {
+            background: var(--surface-bg);
+            border: 1px solid var(--border-color);
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .summary-card::before {
+            content: ""; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--accent-bronze);
+        }
+
+        .label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--text-sub);
+            margin-bottom: 20px;
+            display: block;
+            font-weight: 600;
+        }
+
+        .decision-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border: 1px solid currentColor;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            border-radius: 0;
+        }
+
+        .main-value {
+            font-family: var(--font-display);
+            font-size: 84px;
+            font-weight: 800;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .metrics-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .metric-row {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metric-info h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-sub);
+            margin: 0 0 8px 0;
+        }
+
+        .metric-value {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .chart-section {
+            background: var(--surface-bg);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            margin-bottom: 60px;
+        }
+
+        #chart { width: 100%; height: 500px; }
+
+        footer {
+            border-top: 1px solid var(--border-color);
+            padding: 40px 0 80px 0;
+            font-size: 12px;
+            color: var(--text-sub);
+            line-height: 1.8;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        .disclaimer { font-style: italic; opacity: 0.7; }
+
+        @media (max-width: 992px) {
+            .grid-layout, footer { grid-template-columns: 1fr; }
+            h1 { font-size: 42px; }
+            .main-value { font-size: 64px; }
+            .container { padding: 0 20px; }
+        }
+
+        .progress-container {
+            height: 2px;
+            background: rgba(255,255,255,0.1);
+            margin-top: 15px;
+            width: 100%;
+        }
+        .progress-bar {
+            height: 100%;
+            background: var(--accent-bronze);
+            transition: width 1.5s ease-out;
+        }
     </style>
 </head>
 <body>
+    <div class="top-bar">
+        <div>Network Protocol: <span id="sync-status">Syncing...</span></div>
+        <div>New Brunswick, Canada // <span id="price-status">Loading</span></div>
+    </div>
+
     <div class="container">
-        <div id="status-bar">
-            <span id="sync-status">--</span>
-            <span id="price-status">--</span>
-        </div>
-        <h1>⛽ NB Gas Price Pulse</h1>
-        
-        <div id="skeleton-container" class="cards-grid">
-            <div class="skeleton skeleton-hero"></div>
-            <div class="skeleton skeleton-small"></div>
-            <div class="skeleton skeleton-small"></div>
-            <div class="skeleton skeleton-chart" style="grid-column: span 4;"></div>
+        <header>
+            <h1>NB Gas Pulse</h1>
+            <div class="market-status">
+                <div class="label">Analysis Update</div>
+                <div id="current-date" style="font-size: 14px; font-weight: 600;">--</div>
+            </div>
+        </header>
+
+        <div id="skeleton-container" class="grid-layout">
+            <div class="summary-card" style="height: 400px; opacity: 0.5;"></div>
+            <div class="metrics-panel" style="height: 400px; opacity: 0.5;"></div>
         </div>
 
         <div id="real-content" style="display:none;">
-            <div class="cards-grid">
-                <div class="card card-hero">
-                    <div class="card-label">Weekly Forecast (Thu) <span class="tooltip">ⓘ<span class="tooltiptext">Automated estimate based on market trends. NB EUB maintains final authority.</span></span></div>
-                    <div id="pred-val" class="card-value">--</div>
-                    <div id="pred-direction" class="card-delta">--</div>
-                </div>
-                <div class="card">
-                    <div class="card-label">NB Price</div>
-                    <div id="nb-val" class="card-value">--</div>
-                    <div id="nb-delta" class="card-delta">--</div>
-                </div>
-                <div class="card">
-                    <div class="card-label">Benchmark</div>
-                    <div id="nymex-val" class="card-value">--</div>
-                    <div id="nymex-delta" class="card-delta">--</div>
-                </div>
-                <div class="card" style="grid-column: span 2;">
-                    <div class="card-label">Retail Pricing Efficiency</div>
-                    <div style="display: flex; align-items: baseline; gap: 15px;">
-                        <div id="spread-val" class="card-value">--</div>
-                        <div id="spread-vs-avg" class="card-delta" style="margin-top:0;">--</div>
+            <div class="grid-layout">
+                <section class="summary-card">
+                    <div id="decision-text" class="decision-badge">Analyzing Market Intelligence</div>
+                    <div class="label">Projected Weekly Variation (Thursday)</div>
+                    <h2 id="pred-val" class="main-value">--</h2>
+                    <div id="pred-direction" style="margin-top: 20px; font-weight: 600; font-size: 14px;">--</div>
+                </section>
+
+                <aside class="metrics-panel">
+                    <div class="metric-row">
+                        <div class="metric-info">
+                            <h3>Regulatory Maximum</h3>
+                            <div id="nb-val" class="metric-value">--</div>
+                        </div>
+                        <div id="nb-delta" style="font-weight: 700;">--</div>
                     </div>
-                    <div id="spread-pct" style="font-size: 11px; color: var(--text-sub); margin-top: 8px;">--</div>
-                </div>
+                    <div class="metric-row">
+                        <div class="metric-info">
+                            <h3>Market Benchmark (RBOB)</h3>
+                            <div id="nymex-val" class="metric-value" style="color: var(--accent-blue);">--</div>
+                        </div>
+                        <div id="nymex-delta" style="font-weight: 700;">--</div>
+                    </div>
+                    <div class="metric-row" style="flex-direction: column; align-items: flex-start;">
+                        <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                            <div class="metric-info">
+                                <h3>Retail Efficiency Index</h3>
+                                <div id="spread-val" class="metric-value" style="color: var(--accent-bronze);">--</div>
+                            </div>
+                            <div id="spread-vs-avg" style="font-weight: 700; color: var(--accent-bronze);">--</div>
+                        </div>
+                        <div class="progress-container">
+                            <div id="spread-fill" class="progress-bar" style="width: 0%"></div>
+                        </div>
+                        <div id="spread-pct" style="font-size: 10px; margin-top: 10px; color: var(--text-sub); text-transform: uppercase;">--</div>
+                    </div>
+                </aside>
             </div>
-            <div id="chart"></div>
-            <div class="footer" style="margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-sub); line-height: 1.6;">
+
+            <section class="chart-section">
+                <div class="label">Historical Performance & Spread Analysis</div>
+                <div id="chart"></div>
+            </section>
+
+            <footer>
                 <div>
-                    <b>Data Sources:</b> 
-                    <a href="https://nbeub.ca/current-petroleum-prices-2" target="_blank" style="color: #d94e5d; text-decoration: none;">NB EUB Official</a> &bull; 
-                    <a href="https://finance.yahoo.com/quote/RB=F/" target="_blank" style="color: #3498db; text-decoration: none;">Market Benchmarks</a>
+                    <div class="label">Data Governance</div>
+                    <p>Information is aggregated from the New Brunswick Energy and Utilities Board (NB EUB) and institutional financial benchmarks. Accuracy is prioritized but not guaranteed.</p>
+                    <p>&copy; 2026 NB Gas Pulse Intelligence. Institutional Grade Analysis.</p>
                 </div>
-                <div style="margin-top: 5px;">
-                    Disclaimer: Forecasts are estimates for informational purposes only. The NB EUB maintains final authority.
+                <div class="disclaimer">
+                    <div class="label">Disclaimer</div>
+                    Forecasts are generated through a beta-calibrated statistical model (M7). The NB EUB maintains absolute statutory authority over final maximum pricing. Users are advised to verify data before significant financial commitments.
                 </div>
-            </div>
+            </footer>
         </div>
     </div>
 
     <script>
-        function safeSet(id, val) { const el = document.getElementById(id); if (el) el.innerText = val; }
+        function animateValue(id, start, end, duration, suffix = "") {
+            const obj = document.getElementById(id);
+            if (!obj) return;
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerText = (progress * (end - start) + start).toFixed(1) + suffix;
+                if (progress < 1) window.requestAnimationFrame(step);
+            };
+            window.requestAnimationFrame(step);
+        }
 
         var myChart;
-        const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
         fetch('data.json')
             .then(res => res.json())
@@ -137,55 +299,81 @@
                 document.getElementById('skeleton-container').style.display = 'none';
                 document.getElementById('real-content').style.display = 'block';
                 
-                myChart = echarts.init(document.getElementById('chart'), isDarkMode ? 'dark' : null);
+                myChart = echarts.init(document.getElementById('chart'), 'dark');
 
                 if (data.metadata) {
                     const m = data.metadata;
-                    safeSet("nb-val", m.current_nb_price.toFixed(1) + " ¢");
-                    safeSet("nymex-val", m.current_nymex_price.toFixed(1) + " ¢");
-                    safeSet("spread-val", m.current_spread.toFixed(1) + " ¢");
+                    document.getElementById('current-date').innerText = m.nb_last_date;
                     
-                    document.getElementById('nb-delta').innerHTML = m.nb_delta > 0 ? `<span class="delta-up">▲ +${m.nb_delta.toFixed(1)}</span>` : (m.nb_delta < 0 ? `<span class="delta-down">▼ ${Math.abs(m.nb_delta).toFixed(1)}</span>` : `<span class="delta-neutral">-- No Change</span>`);
-                    document.getElementById('nymex-delta').innerHTML = m.nymex_delta > 0 ? `<span class="delta-up">▲ +${m.nymex_delta.toFixed(1)}</span>` : (m.nymex_delta < 0 ? `<span class="delta-down">▼ ${Math.abs(m.nymex_delta).toFixed(1)}</span>` : `<span class="delta-neutral">-- Stable</span>`);
+                    animateValue("nb-val", 0, m.current_nb_price, 1000, " ¢");
+                    animateValue("nymex-val", 0, m.current_nymex_price, 1000, " ¢");
+                    animateValue("spread-val", 0, m.current_spread, 1000, " ¢");
                     
-                    const sDiff = m.spread_vs_avg;
-                    document.getElementById('spread-vs-avg').innerHTML = sDiff > 0 ? `<span style="color:#f39c12">▲ +${sDiff.toFixed(1)}</span>` : `<span style="color:#f39c12">▼ ${Math.abs(sDiff).toFixed(1)}</span>`;
-                    safeSet("spread-pct", `Higher than ${m.spread_percentile}% of history`);
+                    document.getElementById('nb-delta').innerHTML = m.nb_delta > 0 ? `<span style="color:var(--danger)">+${m.nb_delta.toFixed(1)}</span>` : (m.nb_delta < 0 ? `<span style="color:var(--success)">${m.nb_delta.toFixed(1)}</span>` : `STABLE`);
+                    document.getElementById('nymex-delta').innerHTML = m.nymex_delta > 0 ? `<span style="color:var(--accent-blue)">+${m.nymex_delta.toFixed(1)}</span>` : (m.nymex_delta < 0 ? `<span style="color:var(--accent-blue)">${m.nymex_delta.toFixed(1)}</span>` : `0.00`);
+                    
+                    document.getElementById('spread-vs-avg').innerHTML = `${m.spread_vs_avg > 0 ? '+' : ''}${m.spread_vs_avg.toFixed(1)}`;
+                    document.getElementById('spread-pct').innerText = `Pricing Percentile: ${m.spread_percentile}%`;
+                    setTimeout(() => document.getElementById('spread-fill').style.width = m.spread_percentile + "%", 100);
 
                     const p = m.prediction;
-                    safeSet("pred-val", (p.direction === 'stable' ? '--' : (p.change > 0 ? '+' : '') + p.change.toFixed(1) + " ¢"));
-                    document.getElementById('pred-direction').innerHTML = p.direction === 'up' ? `<span style="color:#ff7875">Expected Up</span>` : (p.direction === 'down' ? `<span style="color:#95de64">Expected Down</span>` : `Stable`);
+                    const pVal = p.direction === 'stable' ? '0.0' : (p.change > 0 ? '+' : '') + p.change.toFixed(1);
+                    animateValue("pred-val", 0, parseFloat(pVal), 1200, " ¢");
+                    
+                    const decisionEl = document.getElementById('decision-text');
+                    if (p.interrupter_risk) {
+                        decisionEl.innerText = "VOLATILITY WARNING: INTERRUPTER RISK";
+                        decisionEl.style.color = "var(--danger)";
+                        document.getElementById('pred-direction').innerHTML = `<span style="color:var(--danger);">Non-standard adjustment likely (±6¢ threshold breached)</span>`;
+                    } else if (p.direction === 'up') {
+                        decisionEl.innerText = "ADVISORY: ACQUISITION RECOMMENDED";
+                        decisionEl.style.color = "var(--danger)";
+                        document.getElementById('pred-direction').innerHTML = `Forecast indicates significant upward momentum.`;
+                    } else if (p.direction === 'down') {
+                        decisionEl.innerText = "ADVISORY: DEFER ACQUISITION";
+                        decisionEl.style.color = "var(--success)";
+                        document.getElementById('pred-direction').innerHTML = `Anticipated relief in regulatory ceiling.`;
+                    } else {
+                        decisionEl.innerText = "MARKET NEUTRAL";
+                        decisionEl.style.color = "var(--text-sub)";
+                        document.getElementById('pred-direction').innerHTML = `Stable trading conditions expected.`;
+                    }
 
-                    safeSet("sync-status", "Last Sync: " + m.last_sync);
-                    safeSet("price-status", "Effective: " + m.nb_last_date);
+                    document.getElementById("sync-status").innerText = "CONNECTED // " + m.last_sync;
+                    document.getElementById("price-status").innerText = m.nb_last_date;
                 }
 
                 const markPoints = [];
                 for (let i = 1; i < data.nb_prices.length; i++) {
                     if (data.nb_prices[i] !== data.nb_prices[i-1]) {
-                        markPoints.push({ coord: [i, data.nb_prices[i]], symbolSize: 6, itemStyle: { color: '#d94e5d' } });
+                        markPoints.push({ coord: [i, data.nb_prices[i]], symbolSize: 6, itemStyle: { color: '#f87171' } });
                     }
                 }
 
                 myChart.setOption({
                     backgroundColor: 'transparent',
-                    tooltip: { trigger: 'axis' },
-                    legend: { bottom: '0%', selected: { 'Retail Spread': false } },
+                    tooltip: { 
+                        trigger: 'axis',
+                        backgroundColor: '#1e293b',
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        textStyle: { color: '#f8fafc', fontFamily: 'Outfit' }
+                    },
+                    legend: { bottom: '0%', textStyle: { color: 'var(--text-sub)', fontFamily: 'Outfit' }, selected: { 'Retail Spread': false } },
                     dataZoom: [{ type: 'inside', start: 85, end: 100 }, { start: 85, end: 100, bottom: 40 }],
-                    xAxis: { type: 'category', data: data.dates },
-                    yAxis: [{ type: 'value', scale: true }, { type: 'value', scale: true, splitLine: {show:false} }],
+                    xAxis: { type: 'category', data: data.dates, axisLine: { lineStyle: { color: 'var(--border-color)' } } },
+                    yAxis: [{ type: 'value', scale: true, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } } }, { type: 'value', scale: true, splitLine: {show:false} }],
                     series: [
-                        { name: 'NB Price', type: 'line', smooth: true, data: data.nb_prices, color: '#d94e5d', markPoint: { symbol: 'circle', data: markPoints } },
-                        { name: 'NYMEX RBOB', type: 'line', smooth: true, data: data.nymex_prices, color: '#3498db' },
+                        { name: 'NB Price', type: 'line', smooth: false, data: data.nb_prices, color: '#f87171', lineStyle: { width: 2 }, markPoint: { symbol: 'circle', data: markPoints } },
+                        { name: 'NYMEX RBOB', type: 'line', smooth: true, data: data.nymex_prices, color: '#38bdf8', lineStyle: { width: 2 } },
                         { 
                             name: 'Retail Spread', type: 'line', smooth: true, yAxisIndex: 1, data: data.spreads, 
-                            color: '#f39c12', lineStyle: { type: 'dashed', width: 1.5 }, areaStyle: { opacity: 0.08 } 
+                            color: '#d4af37', lineStyle: { type: 'dashed', width: 1 }, areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1, [{offset:0, color:'rgba(212,175,55,0.1)'}, {offset:1, color:'transparent'}]) } 
                         }
                     ]
                 });
             })
             .catch(err => {
-                document.getElementById('skeleton-container').innerHTML = "<p>Failed to load data.</p>";
+                document.getElementById('skeleton-container').innerHTML = "<p>Data synchronization failure. Please verify connection.</p>";
                 console.error(err);
             });
 

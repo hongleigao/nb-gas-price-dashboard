@@ -152,6 +152,17 @@ def update_gas_data():
         predicted_nb_price = curr_avg + median_historical_spread
         calibrated_change = (predicted_nb_price - latest['NB_Price']) * BETA
         
+        # [新逻辑] 计算中断条款风险 (Interrupter Clause Risk)
+        # 找到上一个正式调价日的基数
+        last_adj_events = df_final[df_final['NB_Is_Changed']]
+        if not last_adj_events.empty:
+            last_base_rbob = last_adj_events.iloc[-1]['RBOB_CAD_Cents_Liter']
+            accumulated_change = latest['RBOB_CAD_Cents_Liter'] - last_base_rbob
+        else:
+            accumulated_change = 0.0
+        
+        interrupter_risk = abs(accumulated_change) >= 5.5
+        
         spread_vs_median = latest['Spread'] - median_historical_spread
         spread_series = df_final['Spread'].dropna()
         percentile = (spread_series < latest['Spread']).mean() * 100 if not spread_series.empty else 50.0
@@ -164,7 +175,7 @@ def update_gas_data():
                 "last_sync": ast_now_str,
                 "nb_last_date": df_nb_official.index.max().strftime('%Y-%m-%d'),
                 "current_nb_price": float(latest['NB_Price']),
-                "nb_delta": float(real_nb_delta), # 使用修复后的逻辑
+                "nb_delta": float(real_nb_delta), 
                 "current_nymex_price": float(latest['RBOB_CAD_Cents_Liter']),
                 "nymex_delta": real_nymex_delta,
                 "current_spread": float(latest['Spread']),
@@ -172,7 +183,9 @@ def update_gas_data():
                 "spread_percentile": round(percentile, 1),
                 "prediction": { 
                     "change": round(calibrated_change, 1), 
-                    "direction": "up" if calibrated_change > 0.5 else "down" if calibrated_change < -0.5 else "stable" 
+                    "direction": "up" if calibrated_change > 0.5 else "down" if calibrated_change < -0.5 else "stable",
+                    "interrupter_risk": bool(interrupter_risk),
+                    "accumulated_change": round(float(accumulated_change), 1)
                 }
             },
             "dates": df_final['Date'].dt.strftime('%Y-%m-%d').tolist(),

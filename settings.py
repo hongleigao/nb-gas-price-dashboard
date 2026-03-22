@@ -18,5 +18,5 @@ GALLON_TO_LITER = 3.78541
 
 # 5. 系统设置
 ROLLING_WINDOW_DAYS = 730   # 数据保留天数 (2年)
-INCREMENTAL_FETCH_DAYS = 30 # 增量更新抓取的天数 (抓取最近30天以确保覆盖假期和时差)
+INCREMENTAL_FETCH_DAYS = 730 # 临时增加到 730 天以修复历史数据
 DATA_FILE = 'data.json'
