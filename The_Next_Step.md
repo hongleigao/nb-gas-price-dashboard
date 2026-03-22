@@ -8,7 +8,8 @@
 *   **[UX] 骨架屏加载 (Skeleton Loader)**：消除首屏加载的闪烁感。
 *   **[UX] Hero Card 布局**：将预测信息作为页面的绝对焦点。
 *   **[UI] 品牌重塑 (Pulse)**：确立了“NB Gas Price Pulse”品牌，增加了 ⛽ 图标及视觉规范。
-*   **[Algo] 终极校准 (Beta 0.48)**：经过回测验证的最优灵敏度参数。
+*   **[Algo] 物理均值引擎 (M14)**：废弃 Beta 平滑法，实现基于 EUB 第一性原理的预测逻辑。
+*   **[Algo] HST 全适配**：预测值直接包含 15% HST，实现与泵头价格 1:1 映射。
 *   **[Algo] 稳健中位数法**：Retail Spread 分析不再受异常值干扰。
 *   **[Infrastructure] 代码/数据分离架构**：实现了 `main` 和 `gh-pages` 分支隔离。
 

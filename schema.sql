@@ -1,0 +1,21 @@
+-- NB Gas Pulse - Cloudflare D1 (SQLite) Schema Definition
+-- Version: 1.1.0 (Added UNIQUE constraint to prevent duplicates)
+
+DROP TABLE IF EXISTS nymex_market_data;
+CREATE TABLE nymex_market_data (
+    trading_date DATE PRIMARY KEY,
+    rbob_usd_gal REAL NOT NULL,
+    cad_usd_rate REAL NOT NULL,
+    base_cad_liter REAL NOT NULL,
+    is_holiday BOOLEAN DEFAULT 0
+);
+
+DROP TABLE IF EXISTS eub_regulations;
+CREATE TABLE eub_regulations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    effective_date DATE UNIQUE NOT NULL, -- 核心：添加 UNIQUE 约束
+    max_retail_price REAL NOT NULL,
+    actual_pump_price REAL NOT NULL,
+    active_eub_base REAL NOT NULL,
+    is_interrupter BOOLEAN DEFAULT 0 
+);
