@@ -67,7 +67,8 @@ def update_gas_data():
         prices_raw = df_raw.iloc[price_row_idx].values
         
         df_nb_official = pd.DataFrame({'Date': dates_raw, 'NB_Price': prices_raw})
-        df_nb_official['Date'] = pd.to_datetime(df_nb_official['Date'], errors='coerce')
+        # [修复点 1] 增加 format='mixed' 消除警告
+        df_nb_official['Date'] = pd.to_datetime(df_nb_official['Date'], errors='coerce', format='mixed')
         df_nb_official['NB_Price'] = pd.to_numeric(df_nb_official['NB_Price'], errors='coerce')
         
         # 捕捉所有变动点
@@ -117,55 +118,82 @@ def update_gas_data():
         df_final['RBOB_CAD_Cents_Liter'] = df_final['RBOB_CAD_Cents_Liter'].ffill().bfill().round(1)
         
         df_final['Spread'] = (df_final['NB_Price'] - df_final['RBOB_CAD_Cents_Liter']).round(1)
-        # 计算单日变动，仅用于标记红点
+        # 计算单日变动，仅用于标记红点与定位 Effective Date
         df_final['NB_Is_Changed'] = df_final['NB_Price'].diff().fillna(0) != 0
         
         df_final = df_final[df_final['Date'] >= (today - pd.Timedelta(days=settings.ROLLING_WINDOW_DAYS))]
+        df_final = df_final.reset_index(drop=True)
         latest = df_final.iloc[-1]
 
-        # [核心修复 1] 改进 NB Delta 逻辑：计算当前价格与上一个调价日价格的差值
-        change_events = df_final[df_final['NB_Is_Changed'] == True]
-        if len(change_events) >= 1:
-            last_change_val = change_events['NB_Price'].iloc[-1]
-            # 如果今天正好是调价日，我们需要找“上一个”变动日的价格
-            if latest['NB_Is_Changed'] and len(change_events) >= 2:
-                prev_change_val = change_events['NB_Price'].iloc[-2]
-            else:
-                # 否则说明今天在延续之前的价格，我们需要对比变动发生前的那个价格
-                # 逻辑：找到最后一个变动点，它的前一行就是旧价格
-                last_event_idx = change_events.index[-1]
-                prev_change_val = df_final.loc[last_event_idx - 1, 'NB_Price'] if last_event_idx > 0 else last_change_val
-            
-            real_nb_delta = latest['NB_Price'] - prev_change_val
-        else:
-            real_nb_delta = 0.0
-
-        # P2-Core: 升级版预测模型 (Beta 0.48)
+        # ---------------------------------------------------------
+        # 重构核心：基于 EUB 第一性原理的动态差值预测模型
+        # ---------------------------------------------------------
+        
+        # 提取历史利差数据（保留此计算仅为防止前端 UI 缺少参数报错，不再用于预测）
         change_days_for_median = df_final[df_final['NB_Is_Changed']].tail(8)
         median_historical_spread = change_days_for_median['Spread'].median() if not change_days_for_median.empty else latest['Spread']
-        
-        last_wed = today - pd.Timedelta(days=(today.weekday() - 2) % 7)
-        curr_cycle_trading = df_final[(df_final['Date'] >= last_wed) & (df_final['Date'].dt.dayofweek < 5)]
-        curr_avg = curr_cycle_trading['RBOB_CAD_Cents_Liter'].mean() if not curr_cycle_trading.empty else latest['RBOB_CAD_Cents_Liter']
-        
-        BETA = 0.48
-        predicted_nb_price = curr_avg + median_historical_spread
-        calibrated_change = (predicted_nb_price - latest['NB_Price']) * BETA
-        
-        # [新逻辑] 计算中断条款风险 (Interrupter Clause Risk)
-        # 找到上一个正式调价日的基数
-        last_adj_events = df_final[df_final['NB_Is_Changed']]
-        if not last_adj_events.empty:
-            last_base_rbob = last_adj_events.iloc[-1]['RBOB_CAD_Cents_Liter']
-            accumulated_change = latest['RBOB_CAD_Cents_Liter'] - last_base_rbob
-        else:
-            accumulated_change = 0.0
-        
-        interrupter_risk = abs(accumulated_change) >= 5.5
-        
         spread_vs_median = latest['Spread'] - median_historical_spread
         spread_series = df_final['Spread'].dropna()
         percentile = (spread_series < latest['Spread']).mean() * 100 if not spread_series.empty else 50.0
+
+        # A. 创建纯交易日索引用于计算绝对均值 (剔除周末填补带来的污染)
+        df_trading = df_final[df_final['Date'].dt.dayofweek < 5].copy()
+        df_trading.set_index('Date', inplace=True)
+
+        # B. 定位当前价格的“绝对基石”与生效日
+        change_events = df_final[df_final['NB_Is_Changed'] == True]
+        if not change_events.empty:
+            effective_date = change_events.iloc[-1]['Date']
+            current_nb_price = change_events.iloc[-1]['NB_Price']
+        else:
+            effective_date = today
+            current_nb_price = latest['NB_Price']
+
+        # C. 锁定基准时间窗口 (Base Window) 均值
+        if effective_date.dayofweek == 3: 
+            # 常规周四调价：基准为上周三(T-8)至本周二(T-2)
+            base_start = effective_date - pd.Timedelta(days=8)
+            base_end = effective_date - pd.Timedelta(days=2)
+            base_window = df_trading.loc[base_start:base_end]
+        else:
+            # 熔断日调价 (Interrupter)：严格取生效日前最近的 3 个交易日
+            past_trading_days = df_trading.loc[:effective_date - pd.Timedelta(days=1)]
+            base_window = past_trading_days.tail(3)
+            
+        avg_base = base_window['RBOB_CAD_Cents_Liter'].mean() if not base_window.empty else latest['RBOB_CAD_Cents_Liter']
+
+        # D. 锁定新时间窗口 (New Window) 均值，预测下一个周四
+        days_ahead = 3 - today.dayofweek
+        if days_ahead <= 0:
+            days_ahead += 7 # 寻找下一个周四
+        next_thursday = today + pd.Timedelta(days=days_ahead)
+        
+        new_start = next_thursday - pd.Timedelta(days=8)
+        new_end = next_thursday - pd.Timedelta(days=2)
+        new_window = df_trading.loc[new_start:new_end]
+        
+        avg_new = new_window['RBOB_CAD_Cents_Liter'].mean() if not new_window.empty else latest['RBOB_CAD_Cents_Liter']
+
+        # E. 计算纯净 Delta 并叠加 15% HST
+        delta_raw = avg_new - avg_base
+        delta_with_hst = delta_raw * 1.15
+
+        # F. 计算中断条款风险 (Interrupter Clause Risk)
+        # 熔断通常在基准原价偏离超过 6 分时触发，我们测量当前日收盘价与基准均值的偏离度
+        accumulated_change = latest['RBOB_CAD_Cents_Liter'] - avg_base
+        interrupter_risk = abs(accumulated_change) >= 6.0 
+
+        # 用于回溯显示的过往真实 Delta
+        if len(change_events) >= 1:
+            last_change_val = change_events['NB_Price'].iloc[-1]
+            if latest['NB_Is_Changed'] and len(change_events) >= 2:
+                prev_change_val = change_events['NB_Price'].iloc[-2]
+            else:
+                last_event_idx = change_events.index[-1]
+                prev_change_val = df_final.loc[last_event_idx - 1, 'NB_Price'] if last_event_idx > 0 else last_change_val
+            real_nb_delta = latest['NB_Price'] - prev_change_val
+        else:
+            real_nb_delta = 0.0
 
         print("4. 构建输出并保存...")
         ast_now_str = nb_now.strftime('%Y-%m-%d %H:%M:%S AST')
@@ -173,17 +201,18 @@ def update_gas_data():
         output_data = {
             "metadata": {
                 "last_sync": ast_now_str,
+                # [修复点 2] 从 'Date' 列改为 index，因为上面 set_index('Date') 了
                 "nb_last_date": df_nb_official.index.max().strftime('%Y-%m-%d'),
                 "current_nb_price": float(latest['NB_Price']),
                 "nb_delta": float(real_nb_delta), 
                 "current_nymex_price": float(latest['RBOB_CAD_Cents_Liter']),
-                "nymex_delta": real_nymex_delta,
+                "nymex_delta": float(real_nymex_delta),
                 "current_spread": float(latest['Spread']),
-                "spread_vs_avg": round(spread_vs_median, 1),
-                "spread_percentile": round(percentile, 1),
+                "spread_vs_avg": float(round(spread_vs_median, 1)),
+                "spread_percentile": float(round(percentile, 1)),
                 "prediction": { 
-                    "change": round(calibrated_change, 1), 
-                    "direction": "up" if calibrated_change > 0.5 else "down" if calibrated_change < -0.5 else "stable",
+                    "change": round(delta_with_hst, 1), 
+                    "direction": "up" if delta_with_hst > 0.1 else "down" if delta_with_hst < -0.1 else "stable",
                     "interrupter_risk": bool(interrupter_risk),
                     "accumulated_change": round(float(accumulated_change), 1)
                 }
@@ -197,10 +226,12 @@ def update_gas_data():
         validate_data(output_data)
         with open(settings.DATA_FILE, 'w') as f:
             json.dump(output_data, f)
-        print(f"更新成功。NB Delta: {real_nb_delta:+.1f}¢")
+        print(f"更新成功。预测下周油价变动: {delta_with_hst:+.1f}¢")
 
     except Exception as e:
         print(f"❌ 关键错误: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
 if __name__ == "__main__":
