@@ -1,62 +1,58 @@
-# NB Gas Price Dashboard - 部署与运维实战指南 (V4.0)
+# NB Gas Price Pulse - 部署与运维实战指南 (V4.6)
 
-本项目采用 **“代码与数据分离”** 的专业级架构，彻底解决了手动代码维护与自动化数据更新之间的推送冲突。
+本项目采用 **“代码与数据分离”** 架构，使用 GitHub Actions 进行计算，Cloudflare Pages 进行全球加速。
 
 ---
 
 ## 一、 GitHub 核心配置 (必须完成)
 
 ### 1. 开启自动化写权限
-为了让机器人能将生成的 `data.json` 推送到 `gh-pages` 分支：
-1.  进入仓库 **Settings** -> **Actions** -> **General**。
+为了让机器人能将数据推送到 `gh-pages` 分支：
+1.  进入 GitHub 仓库 **Settings** -> **Actions** -> **General**。
 2.  在 **Workflow permissions** 中，选择 **"Read and write permissions"**。
 3.  点击 **Save**。
 
-### 2. 激活 gh-pages 分支
-1.  点击顶部 **Actions** 选项卡。
-2.  选择 **Update Gas Data and Deploy** 工作流。
-3.  点击右侧 **Run workflow** 下拉按钮并执行。
-4.  运行成功后，仓库会自动创建一个 `gh-pages` 分支。
+### 2. 移除 [skip ci] 逻辑
+当前版本的 `.github/workflows/main.yml` 已移除了 `[skip ci]` 标签。这确保了当机器人更新数据时，Cloudflare Pages 能够正确检测到变动并触发自动部署。
 
 ---
 
 ## 二、 Cloudflare Pages 全自动上线
 
-1.  **关联仓库**：在 Cloudflare Pages 菜单选择 **Connect to Git**。
-2.  **关键构建设置 (Build Settings)**：
-    *   **Production branch**: 必须手动修改为 **`gh-pages`**。
+1.  **关联仓库**：在 Cloudflare 控制台选择 **Workers & Pages** -> **Connect to Git**。
+2.  **核心构建设置 (Build Settings)**：
+    *   **Production branch**: 必须手动修改为 **`gh-pages`** (不要选 main)。
     *   **Framework preset**: 选 `None`。
-    *   **Build command**: 保持 **留空** (脚本在 GitHub 已跑完)。
-    *   **Build output directory**: 填写一个点 **`.`**。
-3.  **自动部署**：一旦配置完成，未来您在 `main` 分支推代码，Cloudflare 会在 1 分钟内同步更新结果。
+    *   **Build command**: 保持 **留空**。
+    *   **Build output directory**: 输入一个点 **`.`**。
+3.  **自定义域名**：建议在 **Custom domains** 选项卡中添加您的子域名（如 `gas.jgao.app`）。
 
 ---
 
-## 三、 专家级冲突解决：Git Pull Rebase
+## 三、 专家级冲突解决 (Git Rebase)
 
-如果因为机器人运行导致您在 `main` 分支推送失败（尽管几率已极低），请执行：
+如果在 `main` 分支推送代码时遇到 `[rejected]` 错误，请执行以下命令强制以本地代码为准并同步云端数据：
 
-1.  **撤销任何卡住的状态**：`git rebase --abort`
-2.  **强行对齐云端数据**：
+1.  **重置冲突状态**：`git rebase --abort`
+2.  **拉取并重排提交**：
     ```powershell
     git pull origin main --rebase -X ours
     ```
-    *注：这会保留您的本地代码修改，同时吸纳云端由于自动更新产生的 data.json 变动。*
-3.  **重新生成数据并推送**：
+3.  **一气呵成推送**：
     ```powershell
     python update_data.py
     git add .
-    git commit -m "Fix: Synced logic and data"
+    git commit -m "Fix: Synced data and logic"
     git push origin main
     ```
 
 ---
 
-## 四、 常见运维排障
+## 四、 移动端安装 (PWA)
 
-*   **Cloudflare 部署显示 Skipped**：检查 `.github/workflows/main.yml` 是否已移除 `[skip ci]` 标签。当前版本已移除此标签以确保部署。
-*   **本地报错 ModuleNotFoundError**：执行 `pip install pandas yfinance xlrd openpyxl`。
-*   **数据显示超前一天**：确保 `update_data.py` 中的 `America/Moncton` 时区锁定代码未被修改。
+*   **iOS**: 在 Safari 中点击“分享”按钮 -> **“添加到主屏幕”**。
+*   **Android**: 在 Chrome 中点击菜单按钮 -> **“安装应用”**。
+*   安装后，应用将以 **“Gas Pulse”** 命名，并具备独立的启动画面。
 
 ---
 祝您的油价监控平台运行顺利！
