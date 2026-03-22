@@ -1,72 +1,44 @@
-# NB Gas Price Pulse - 核心设计与算法白皮书 (V4.8)
+# NB Gas Price Pulse - 架构白皮书 (Cloud Native V5.0)
 
-本项目是一个集成自动化 ETL、金融建模、调价预测及多端 PWA 可视化于一体的专业监控平台。
-
----
-
-## 1. 架构设计 (System Architecture)
-
-项目采用 **轻量化 Serverless 思想**，通过 GitHub Actions 定时触发 Python 脚本进行数据处理，并将静态 JSON 结果推送到 GitHub Pages。
-
-### 1.1 数据流转
-1.  **数据采集 (E)**: 
-    *   从 NB EUB 官网抓取历史油价 Excel。
-    *   通过 `yfinance` 获取 NYMEX RBOB 期货与 CAD 汇率。
-2.  **数据清洗与建模 (T)**: 
-    *   动态解析 Excel (通过关键词定位)。
-    *   执行增量合并，确保 730 天历史记录完整。
-    *   运行 **M7 统计校准模型**。
-3.  **结果输出 (L)**: 
-    *   生成 `data.json`，包含元数据、时间轴价格及价差。
+本项目已进化为基于 **Cloudflare 生态的云原生数据中台**，实现了数据存储、逻辑计算与前端展示的彻底解耦。
 
 ---
 
-## 2. 核心逻辑与接口 (Core Logic & Interfaces)
+## 1. 系统架构 (System Architecture)
 
-### 2.1 预测引擎 (M7 - Beta Calibrated Model)
-*   **输入参数**:
-    *   `Curr_Avg`: 本周三至今的 RBOB (CAD ¢/L) 均值。
-    *   `Median_Spread_8W`: 过去 8 周调价日的价差中位数。
-*   **计算公式**:
-    *   `Predicted_Price = Curr_Avg + Median_Spread_8W`
-    *   `Calibrated_Change = (Predicted_Price - Last_NB_Price) * 0.48` (平滑系数 Beta=0.48)。
-*   **判断逻辑**:
-    *   若 `Calibrated_Change > 0.5`: 方向为 `up` (建议 Buy)。
-    *   若 `Calibrated_Change < -0.5`: 方向为 `down` (建议 Wait)。
-    *   否则: 状态为 `stable`。
-
-### 2.2 政策哨兵：中断条款 (Interrupter Clause)
-*   **触发监测**: 计算当前 RBOB 价格与上一个官方调价日基准价格的差值。
-*   **逻辑判定**: `abs(accumulated_change) >= 5.5¢`。
-*   **接口输出**: `interrupter_risk: true`。
-
-### 2.3 零售效率评价 (Retail Efficiency)
-*   **Spread 计算**: `Current_NB - Current_RBOB`。
-*   **百分位映射**: 将当前 Spread 与过去 2 年所有记录对比，计算 `Percentile`。百分位越低，说明当前零售利润被压缩得越厉害（对消费者越有利）。
+### 1.1 数据流转闭环
+1.  **数据采集 (GitHub Actions)**：`update_data.py` 每日从 `yfinance` 抓取金融指标，解析 EUB 官网 Excel 获取限价快照。
+2.  **云端存储 (Cloudflare D1)**：采用分布式 SQLite 数据库，持久化存储 NYMEX 行情线与监管调价记录。
+3.  **按需计算 (Cloudflare Worker)**：在用户访问瞬间，通过 SQL 窗口函数完成均值聚合、归因拆解及日历轴补全。
+4.  **动态渲染 (GitHub Pages)**：前端通过 Fetch 调用 Worker API，实现秒级响应的交互式看板。
 
 ---
 
-## 3. 实现细节 (Implementation Details)
+## 2. 核心逻辑规范 (Core Logic)
 
-### 3.1 后端 ETL (`update_data.py`)
-*   **时区锁定**: 使用 `pytz` 强制锁定 `America/Moncton`，防止服务器 UTC 时间导致的日期偏移。
-*   **动态解析**: 搜索 Excel 中的 "Date" 和 "Regular Unleaded" 关键词，自适应政府报表格式的微调。
-*   **增量合并**: 优先读取旧的 `data.json` 并只补充缺失日期，减少 API 调用。
+### 2.1 预测模型：第一性原理均值法 (M14)
+*   **计算窗口**：严格对齐 EUB 周期，取 **下周四调价对应的 T-8 至 T-2 交易日均值**。
+*   **预测 Delta**：`(New_Window_Avg - Current_Base_Avg) * 1.15 (HST)`。
+*   **归因拆解 (Attribution)**：
+    *   `Commodity Impact`：锁定汇率，由原油期货波动产生的贡献。
+    *   `FX Impact`：锁定原油，由加元汇率波动产生的贡献。
 
-### 3.2 前端展示 (`index.html`)
-*   **Visual Thesis**: Precision & Calm (精准且冷静)。
-*   **材质**: Glassmorphism (磨砂玻璃) + Dot Matrix (背景点阵)。
-*   **交互**: 
-    *   `animateValue`: 实现数值从 0 到目标值的平滑滚动。
-    *   `ECharts`: 绘制三线合一图表（NB Price, NYMEX, Spread）。
-*   **响应式决策**: 前端根据 `interrupter_risk` 状态实时切换 Hero Banner 样式（红色警示或决策勋章）。
+### 2.2 熔断风险仪 (Interrupter Gauge)
+*   **监测频率**：实时。
+*   **逻辑**：`Current_3Day_Avg - Current_Base_Avg`。
+*   **阈值**：
+    *   🟢 **LOW**: < 3.0¢
+    *   🟡 **ELEVATED**: 3.0¢ - 5.5¢
+    *   🔴 **CRITICAL**: > 5.5¢ (可能触发提前调价)
 
 ---
 
-## 4. 关键指标 (KPIs)
-*   **MAE**: 1.63¢ (平均绝对误差)。
-*   **方向准确率**: 78.7% (回测结果)。
-*   **1c_Hit**: 40.4% (误差小于 1¢ 的概率)。
+## 3. 技术栈 (Tech Stack)
+*   **Database**: Cloudflare D1 (SQLite)
+*   **Backend**: Cloudflare Workers (JavaScript / SQL)
+*   **Data Ingestion**: Python (yfinance, pandas, requests)
+*   **Frontend**: Vanilla HTML/CSS/JS + ECharts
+*   **CI/CD**: GitHub Actions
 
 ---
 *Documented by Gemini CLI - 2026-03-22*
