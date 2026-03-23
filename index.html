@@ -214,7 +214,10 @@
                     <!-- A. 价格驱动力分析 -->
                     <div class="insight-hub">
                         <div class="attribution-viz">
-                            <div class="label" style="margin-bottom: 15px; font-size: 10px;">Instant Market Drive (Spot vs. Base)</div>
+                            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 15px;">
+                                <div class="label" style="margin-bottom: 0; font-size: 10px;">Instant Market Drive (Spot vs. Base)</div>
+                                <div id="market-data-date" style="font-size: 9px; color: var(--text-sub); opacity: 0.8;">Data as of: --</div>
+                            </div>
                             <div class="attr-item" style="font-size: 13px;">
                                 <div style="display: flex; justify-content: space-between;">
                                     <span style="color: var(--text-sub);">Global Market</span>
@@ -347,6 +350,7 @@
                     const m = data.metadata;
                     const now_nb = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Moncton"}));
                     document.getElementById('current-date').innerText = m.nb_last_date;
+                    document.getElementById('market-data-date').innerText = `Market Date: ${m.market_data_last_date}`;
                     animateValue("nb-val", 0, m.current_nb_price, 1000, " ¢", false);
                     animateValue("pump-val", 0, m.current_nb_price - 5.5, 1000, " ¢", false);
                     document.getElementById('nb-delta').innerHTML = m.nb_delta > 0 ? `<span style="color:var(--accent-red)">+${m.nb_delta.toFixed(1)}</span>` : (m.nb_delta < 0 ? `<span style="color:var(--accent-green)">${m.nb_delta.toFixed(1)}</span>` : `STABLE`);
