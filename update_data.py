@@ -90,8 +90,10 @@ def fetch_eub_regulation():
 def main():
     # 时区锁定
     nb_tz = pytz.timezone('America/Moncton')
-    today = datetime.now(nb_tz).strftime('%Y-%m-%d')
-    
+    nb_now = datetime.now(nb_tz)
+    today_str = nb_now.strftime('%Y-%m-%d')
+    day_of_week = nb_now.weekday() # 0 Mon, 1 Tue, ..., 4 Fri, 6 Sun
+
     if not all([CF_ACCOUNT_ID, CF_DATABASE_ID, CF_API_TOKEN]):
         print("❌ 错误: 缺少 Cloudflare 凭证。请检查 GitHub Secrets。")
         sys.exit(1)
@@ -107,24 +109,26 @@ def main():
             cad_usd_rate=excluded.cad_usd_rate,
             base_cad_liter=excluded.base_cad_liter;
         """
-        push_to_d1(sql_market, [today, market["rbob_usd_gal"], market["cad_usd_rate"], market["base_cad_liter"]])
+        push_to_d1(sql_market, [today_str, market["rbob_usd_gal"], market["cad_usd_rate"], market["base_cad_liter"]])
         print(f"✅ 金融行情同步成功: {market['base_cad_liter']} ¢/L")
 
         # 2. 采集并同步 EUB 官方限价
         eub = fetch_eub_regulation()
-        # 注意：此处 active_eub_base 的逻辑将在 Worker 侧根据 effective_date 前的历史均值计算
-        # 此处仅推送官方状态
+        
+        # 专家规则：如果生效日期不是周五 (4)，则 100% 是 Interrupter
+        eff_date_obj = datetime.strptime(eub["effective_date"], '%Y-%m-%d')
+        is_interrupter = 1 if eff_date_obj.weekday() != 4 else 0
+
         sql_eub = """
             INSERT INTO eub_regulations (effective_date, max_retail_price, actual_pump_price, active_eub_base, is_interrupter)
-            VALUES (?, ?, ?, 0, 0)
+            VALUES (?, ?, ?, 0, ?)
         """
-        # 简单的幂等性检查：如果该日期已存在，则不重复插入
         check_sql = "SELECT id FROM eub_regulations WHERE effective_date = ?"
         exists = push_to_d1(check_sql, [eub["effective_date"]])
         
         if exists and not exists.get("result", [{}])[0].get("results"):
-            push_to_d1(sql_eub, [eub["effective_date"], eub["max_retail_price"], eub["max_retail_price"] - 5.5])
-            print(f"✅ EUB 官方调价快照同步: {eub['max_retail_price']} ¢/L ({eub['effective_date']})")
+            push_to_d1(sql_eub, [eub["effective_date"], eub["max_retail_price"], eub["max_retail_price"] - 5.5, is_interrupter])
+            print(f"✅ EUB 官方调价快照同步: {eub['max_retail_price']} ¢/L ({eub['effective_date']}), Interrupter={is_interrupter}")
         else:
             print(f"ℹ️ 该日期 ({eub['effective_date']}) 的 EUB 监管快照已存在，跳过。")
 
