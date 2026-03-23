@@ -1,6 +1,5 @@
 import os
 import sys
-import json
 import requests
 import pandas as pd
 import yfinance as yf
@@ -12,7 +11,7 @@ from dotenv import load_dotenv
 # 加载本地 .env 文件 (如果存在)
 load_dotenv()
 
-# 获取环境变量 (无论是来自 .env 还是 GitHub Actions)
+# 获取环境变量
 CF_ACCOUNT_ID = os.environ.get('CLOUDFLARE_ACCOUNT_ID')
 CF_DATABASE_ID = os.environ.get('CLOUDFLARE_DATABASE_ID')
 CF_API_TOKEN = os.environ.get('CLOUDFLARE_API_TOKEN')
@@ -24,11 +23,7 @@ def push_to_d1(sql, params):
         "Authorization": f"Bearer {CF_API_TOKEN}",
         "Content-Type": "application/json"
     }
-    payload = {
-        "params": params,
-        "sql": sql
-    }
-    
+    payload = {"params": params, "sql": sql}
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=10)
         result = response.json()
@@ -40,62 +35,62 @@ def push_to_d1(sql, params):
         return None
 
 def fetch_market_data():
-    """使用 yfinance 获取 NYMEX RBOB 和 USDCAD 汇率"""
+    """使用专家建议的抓取逻辑获取 NYMEX RBOB 和 USDCAD 汇率"""
     print("1. 获取金融行情 (yfinance)...")
-    # RB=F 是 NYMEX RBOB 期货，USDCAD=X 是美元兑加元汇率
-    rbob = yf.download("RB=F", period="5d", progress=False)['Close']
-    cad = yf.download("USDCAD=X", period="5d", progress=False)['Close']
-    
-    if rbob.empty or cad.empty:
-        raise ValueError("无法获取金融行情数据")
+    try:
+        # 专家方法：使用 Ticker 直接获取最近数据
+        rbob_ticker = yf.Ticker("RB=F")
+        rbob_hist = rbob_ticker.history(period="5d")
+        latest_rbob = float(rbob_hist['Close'].iloc[-1])
+
+        cad_ticker = yf.Ticker("CAD=X")
+        cad_hist = cad_ticker.history(period="5d")
+        latest_cad = float(cad_hist['Close'].iloc[-1])
+
+        # 核心转换公式：(每加仑美元 * 加元汇率) / 3.7854 * 100
+        base_cad_liter = round((latest_rbob * latest_cad) / 3.7854 * 100, 2)
         
-    # 修正 FutureWarning: 使用 iloc[0] 显式转换
-    latest_rbob = float(rbob.iloc[-1].iloc[0]) if isinstance(rbob.iloc[-1], pd.Series) else float(rbob.iloc[-1])
-    latest_cad = float(cad.iloc[-1].iloc[0]) if isinstance(cad.iloc[-1], pd.Series) else float(cad.iloc[-1])
-    
-    # 专家公式：base_cad_liter = (rbob * rate) / 3.7854 * 100
-    base_cad_liter = round((latest_rbob * latest_cad) / 3.7854 * 100, 2)
-    
-    return {
-        "rbob_usd_gal": latest_rbob,
-        "cad_usd_rate": latest_cad,
-        "base_cad_liter": base_cad_liter
-    }
+        print(f"数据处理完毕: RBOB=${latest_rbob:.4f}, 汇率={latest_cad:.4f}, 基准加分={base_cad_liter}¢")
+        return {
+            "rbob_usd_gal": latest_rbob,
+            "cad_usd_rate": latest_cad,
+            "base_cad_liter": base_cad_liter
+        }
+    except Exception as e:
+        raise RuntimeError(f"拉取 yfinance 数据失败: {e}")
 
 def fetch_eub_regulation():
-    """解析 NB EUB Excel 获取官方限价 (监管锚点)"""
+    """解析 NB EUB Excel 获取官方限价 (保持监管锚点)"""
     print("2. 获取 NB EUB 官方限价 (Excel 解析)...")
     df_raw = pd.read_excel(settings.NBEUB_XLS_URL, sheet_name=settings.EXCEL_SHEET_NAME, header=None, engine='xlrd')
-    
-    # 动态定位日期和价格行
     try:
         date_row_idx = df_raw[df_raw.apply(lambda x: x.astype(str).str.contains(settings.ROW_KEYWORD_DATE, case=False).any(), axis=1)].index[0]
         price_row_idx = df_raw[df_raw.apply(lambda x: x.astype(str).str.contains(settings.ROW_KEYWORD_PRICE, case=False).any(), axis=1)].index[0]
     except:
         date_row_idx, price_row_idx = 2, 7
-        
     dates_raw = df_raw.iloc[date_row_idx].values
     prices_raw = df_raw.iloc[price_row_idx].values
-    
     df = pd.DataFrame({'Date': dates_raw, 'Price': prices_raw})
     df['Date'] = pd.to_datetime(df['Date'], errors='coerce', format='mixed')
     df['Price'] = pd.to_numeric(df['Price'], errors='coerce')
     df = df.dropna().sort_values('Date').iloc[-1]
-    
     return {
         "effective_date": df['Date'].strftime('%Y-%m-%d'),
         "max_retail_price": float(df['Price'])
     }
 
 def main():
-    # 时区锁定
+    # 专家建议：时区处理与周末回溯
     nb_tz = pytz.timezone('America/Moncton')
-    nb_now = datetime.now(nb_tz)
-    today_str = nb_now.strftime('%Y-%m-%d')
-    day_of_week = nb_now.weekday() # 0 Mon, 1 Tue, ..., 4 Fri, 6 Sun
+    now = datetime.now(nb_tz)
+    
+    # 如果是周末运行，强行取上一个周五的日期
+    if now.weekday() >= 5:
+        now = now - timedelta(days=now.weekday() - 4)
+    trading_date_str = now.strftime('%Y-%m-%d')
 
     if not all([CF_ACCOUNT_ID, CF_DATABASE_ID, CF_API_TOKEN]):
-        print("❌ 错误: 缺少 Cloudflare 凭证。请检查 GitHub Secrets。")
+        print("❌ 错误: 缺少 Cloudflare 凭证。")
         sys.exit(1)
 
     try:
@@ -109,28 +104,28 @@ def main():
             cad_usd_rate=excluded.cad_usd_rate,
             base_cad_liter=excluded.base_cad_liter;
         """
-        push_to_d1(sql_market, [today_str, market["rbob_usd_gal"], market["cad_usd_rate"], market["base_cad_liter"]])
-        print(f"✅ 金融行情同步成功: {market['base_cad_liter']} ¢/L")
+        push_to_d1(sql_market, [trading_date_str, market["rbob_usd_gal"], market["cad_usd_rate"], market["base_cad_liter"]])
+        print(f"✅ 金融行情同步成功: {market['base_cad_liter']} ¢/L ({trading_date_str})")
 
         # 2. 采集并同步 EUB 官方限价
         eub = fetch_eub_regulation()
-        
-        # 专家规则：如果生效日期不是周五 (4)，则 100% 是 Interrupter
         eff_date_obj = datetime.strptime(eub["effective_date"], '%Y-%m-%d')
         is_interrupter = 1 if eff_date_obj.weekday() != 4 else 0
 
         sql_eub = """
-            INSERT INTO eub_regulations (effective_date, max_retail_price, actual_pump_price, active_eub_base, is_interrupter)
-            VALUES (?, ?, ?, 0, ?)
+            INSERT INTO eub_regulations (effective_date, max_retail_price, actual_pump_price, active_eub_base, rbob_usd_gal, cad_usd_rate, is_interrupter)
+            VALUES (?, ?, ?, 0, ?, ?, ?)
+            ON CONFLICT(effective_date) DO NOTHING;
         """
-        check_sql = "SELECT id FROM eub_regulations WHERE effective_date = ?"
-        exists = push_to_d1(check_sql, [eub["effective_date"]])
-        
-        if exists and not exists.get("result", [{}])[0].get("results"):
-            push_to_d1(sql_eub, [eub["effective_date"], eub["max_retail_price"], eub["max_retail_price"] - 5.5, is_interrupter])
-            print(f"✅ EUB 官方调价快照同步: {eub['max_retail_price']} ¢/L ({eub['effective_date']}), Interrupter={is_interrupter}")
-        else:
-            print(f"ℹ️ 该日期 ({eub['effective_date']}) 的 EUB 监管快照已存在，跳过。")
+        push_to_d1(sql_eub, [
+            eub["effective_date"], 
+            eub["max_retail_price"], 
+            eub["max_retail_price"] - 5.5, 
+            market["rbob_usd_gal"], 
+            market["cad_usd_rate"], 
+            is_interrupter
+        ])
+        print(f"✅ EUB 官方调价快照检查/同步完成: {eub['max_retail_price']} ¢/L ({eub['effective_date']})")
 
     except Exception as e:
         print(f"❌ 同步失败: {e}")

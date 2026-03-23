@@ -1,15 +1,15 @@
 /**
  * NB Gas Pulse - Cloudflare Worker (The Brain)
- * 职责：执行 SQL 聚合计算，输出预测结论、归因拆解与风险预警。
- * 版本：1.9.0 (落实专家建议：双轨触发熔断逻辑 + 法定静默期保护)
+ * 职责：整合专家建议的 3日滚动均值逻辑 + 法定静默期判定
+ * 版本：2.1.0 (Expert Algorithm Integration)
  */
 
 export default {
   async fetch(request, env) {
-    const { D1_DB } = env;
+    const { D1_DB } = env; // 保持与当前配置一致使用 D1_DB
 
     try {
-      // 1. 获取最新的两条 EUB 监管状态 (计算上次变动)
+      // 1. 获取 EUB 官方底层锚点 (绝对基石)
       const eub_history = await D1_DB.prepare(
         "SELECT * FROM eub_regulations ORDER BY effective_date DESC LIMIT 2"
       ).all();
@@ -21,117 +21,96 @@ export default {
       const latest_eub = eub_history.results[0];
       const prev_eub = eub_history.results[1];
       const nb_delta = prev_eub ? (latest_eub.max_retail_price - prev_eub.max_retail_price) : 0;
+      const activeBase = latest_eub.active_eub_base || (latest_eub.max_retail_price / 1.15 - 45); // 优先使用数据库底牌
 
       const now_nb = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Moncton"}));
       const current_iso = now_nb.toISOString().split('T')[0];
+      const day_of_week = now_nb.getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+
+      // 2. 获取最近 7 个交易日的市场数据 (专家建议)
+      const market_data = await D1_DB.prepare(`
+        SELECT trading_date, base_cad_liter, rbob_usd_gal, cad_usd_rate
+        FROM nymex_market_data 
+        WHERE is_holiday = 0 AND trading_date <= ?
+        ORDER BY trading_date DESC 
+        LIMIT 7
+      `).bind(current_iso).all();
+
+      if (market_data.results.length < 3) throw new Error("市场数据不足");
+      const recentTrades = market_data.results;
+
+      // 3. 熔断机制判定 (Interrupter Clause) - 专家算法
+      let interrupter_alert = false;
+      let interrupter_type = "none";
+      let interrupter_reason = "市场平稳";
+      let cumulative_delta = 0;
+
+      // 铁律：排除周二 (2) 和 周三 (3) 的法定静默期
+      const is_blackout = (day_of_week === 2 || day_of_week === 3);
       
-      // 2. 确定 5 个计价交易日 (上周三至本周二)
-      let days_to_thu = (4 - now_nb.getDay() + 7) % 7;
-      if (days_to_thu === 0) days_to_thu = 7;
+      if (!is_blackout) {
+        const last3Days = recentTrades.slice(0, 3);
+        const rollingAvg3Days = last3Days.reduce((sum, row) => sum + row.base_cad_liter, 0) / 3;
+        cumulative_delta = rollingAvg3Days - activeBase;
+
+        if (Math.abs(cumulative_delta) >= 5.0) {
+          interrupter_alert = true;
+          interrupter_type = cumulative_delta > 0 ? "hike" : "drop";
+          interrupter_reason = `触发累计红线: 偏离达 ${cumulative_delta.toFixed(2)} ¢`;
+        }
+      } else {
+        interrupter_reason = "处于法定调价静默期 (周二/周三)";
+      }
+
+      // 4. 常规周四预测 (Routine Thursday) & 归因分析
+      const routineAvg = recentTrades.reduce((sum, row) => sum + row.base_cad_liter, 0) / recentTrades.length;
+      const display_total = Math.round((routineAvg - activeBase) * 1.15 * 10) / 10;
+      
+      // 归因分析 (保持原有深度)
+      const cur_rbob = recentTrades[0].rbob_usd_gal;
+      const cur_fx = recentTrades[0].cad_usd_rate;
+      const ref_rbob = latest_eub.rbob_usd_gal || cur_rbob;
+      const ref_fx = latest_eub.cad_usd_rate || cur_fx;
+
+      const comm_impact = ((cur_rbob - ref_rbob) * ref_fx / 3.7854) * 1.15 * 100;
+      const fx_impact = (cur_rbob * (cur_fx - ref_fx) / 3.7854) * 1.15 * 100;
+
+      // 5. 构造 5 日窗口明细表 (用于 UI 日历)
+      const days_to_thu = (4 - day_of_week + 7) % 7 || 7;
       const next_thu = new Date(now_nb.getTime() + days_to_thu * 24 * 60 * 60 * 1000);
-      
       const window_dates = [];
       for (let i = 8; i >= 2; i--) {
           const d = new Date(next_thu.getTime() - i * 24 * 60 * 60 * 1000);
           if (d.getDay() !== 0 && d.getDay() !== 6) window_dates.push(d.toISOString().split('T')[0]);
       }
       const target_5_days = window_dates.slice(-5);
-      const window_start = target_5_days[0];
-      const window_end = target_5_days[4];
-
-      // 3. 执行 SQL 聚合
-      const window_stats = await D1_DB.prepare(`
-        SELECT 
-          AVG(base_cad_liter) as avg_new, AVG(rbob_usd_gal) as avg_usd_new, AVG(cad_usd_rate) as avg_fx_new, 
-          COUNT(CASE WHEN trading_date <= ? THEN 1 END) as locked_days
-        FROM nymex_market_data WHERE trading_date BETWEEN ? AND ?
-      `).bind(current_iso, window_start, window_end).first();
-
-      const base_start = new Date(new Date(latest_eub.effective_date).getTime() - 8 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const base_end = new Date(new Date(latest_eub.effective_date).getTime() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      
-      const base_stats = await D1_DB.prepare(`
-        SELECT AVG(base_cad_liter) as avg_base, AVG(rbob_usd_gal) as avg_usd_base, AVG(cad_usd_rate) as avg_fx_base
-        FROM nymex_market_data WHERE trading_date BETWEEN ? AND ?
-      `).bind(base_start, base_end).first();
-
-      const rolling_stats = await D1_DB.prepare(`
-        SELECT AVG(base_cad_liter) as avg_rolling 
-        FROM (SELECT base_cad_liter FROM nymex_market_data ORDER BY trading_date DESC LIMIT 3)
-      `).first();
-
-      // ---------------------------------------------------------
-      // 4. 核心：专家级熔断双轨逻辑 (Interrupter Clause 1.9.0)
-      // ---------------------------------------------------------
-      const avg_base = base_stats.avg_base || 0;
-      const avg_new = window_stats.avg_new || 0;
-      const avg_rolling_3d = rolling_stats.avg_rolling || 0;
-
-      // 提取原始市场行情用于“单日波动”检测
-      const raw_market_data = await D1_DB.prepare("SELECT base_cad_liter FROM nymex_market_data ORDER BY trading_date DESC LIMIT 2").all();
-      const latest_market = raw_market_data.results[0]?.base_cad_liter || 0;
-      const prev_market = raw_market_data.results[1]?.base_cad_liter || 0;
-
-      const daily_spike = Math.abs(latest_market - prev_market);
-      const cumulative_drift = avg_base > 0 ? Math.abs(avg_rolling_3d - avg_base) : 0;
-
-      // 法定静默期判定 (周二=2, 周三=3)
-      const day_of_week = now_nb.getDay();
-      const is_blackout = (day_of_week === 2 || day_of_week === 3);
-
-      let risk_level = "green";
-      if (!is_blackout) {
-          // 规则一：单日极端波动 >= 6.0 (税前)
-          // 规则二：多日累计偏离 >= 5.0 (税前)
-          if (daily_spike >= 6.0 || cumulative_drift >= 5.0) {
-              risk_level = "red";
-          } else if (daily_spike >= 4.0 || cumulative_drift >= 3.5) {
-              risk_level = "yellow";
-          }
-      }
-
-      // 5. 预测与归因 (保持强制平衡)
-      let display_total = 0, display_comm = 0, display_fx = 0, direction = "stable";
-      if (avg_base > 0 && avg_new > 0) {
-        display_total = Math.round((avg_new - avg_base) * 1.15 * 10) / 10;
-        const raw_comm = (( (window_stats.avg_usd_new || 0) - (base_stats.avg_usd_base || 0) ) * (base_stats.avg_fx_base || 1.40) / 3.7854) * 100 * 1.15;
-        display_comm = Math.round(raw_comm * 100) / 100;
-        display_fx = Math.round((display_total - display_comm) * 100) / 100;
-        direction = display_total > 0.1 ? "up" : display_total < -0.1 ? "down" : "stable";
-      }
-
-      // 6. 构造响应与明细表
-      const daily_market = await D1_DB.prepare("SELECT trading_date, base_cad_liter FROM nymex_market_data WHERE trading_date BETWEEN ? AND ?").bind(window_start, window_end).all();
-      const daily_eub = await D1_DB.prepare("SELECT effective_date, is_interrupter FROM eub_regulations WHERE effective_date BETWEEN ? AND ?").bind(window_start, window_end).all();
-      const market_map = new Map(daily_market.results.map(r => [r.trading_date, r.base_cad_liter]));
-      const interrupter_set = new Set(daily_eub.results.filter(r => r.is_interrupter).map(r => r.effective_date));
+      const market_map = new Map(recentTrades.map(r => [r.trading_date, r.base_cad_liter]));
 
       const breakdown = target_5_days.map(date_str => {
           const val = market_map.get(date_str);
-          const d_obj = new Date(date_str + 'T12:00:00');
           return {
-              date: d_obj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-              day: d_obj.toLocaleDateString('en-US', { weekday: 'short' }),
-              diff: val ? Math.round((val - avg_base) * 1.15 * 10) / 10 : null,
-              is_interrupter: interrupter_set.has(date_str)
+              date: new Date(date_str + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              day: new Date(date_str + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' }),
+              diff: val ? Math.round((val - activeBase) * 1.15 * 10) / 10 : null
           };
       });
 
-      // 图表数据
-      const raw_market_hist = await D1_DB.prepare("SELECT * FROM nymex_market_data ORDER BY trading_date DESC LIMIT 1000").all();
-      const raw_eub_hist = await D1_DB.prepare("SELECT * FROM eub_regulations ORDER BY effective_date DESC LIMIT 1000").all();
-      const market_hist_map = new Map(raw_market_hist.results.map(r => [r.trading_date, r.base_cad_liter]));
-      const dates = [], nymex_series = [], nb_series = [];
-      for (let i = 29; i >= 0; i--) {
-          const d = new Date(now_nb.getTime() - i * 24 * 60 * 60 * 1000);
-          const d_str = d.toISOString().split('T')[0];
-          dates.push(d_str);
-          let m_val = market_hist_map.get(d_str) || raw_market_hist.results.find(r => r.trading_date <= d_str)?.base_cad_liter || 0;
-          nymex_series.push(Math.round(m_val * 10) / 10);
-          const curr_eub = raw_eub_hist.results.find(e => e.effective_date <= d_str);
-          nb_series.push(curr_eub ? curr_eub.max_retail_price : latest_eub.max_retail_price);
-      }
+      // 6. 历史趋势数据 (近 2 年) - 保持图表功能
+      const start_date_history = new Date(now_nb.getTime() - 730 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const history_market = await D1_DB.prepare("SELECT trading_date, base_cad_liter FROM nymex_market_data WHERE trading_date >= ? ORDER BY trading_date ASC").bind(start_date_history).all();
+      const history_eub = await D1_DB.prepare("SELECT effective_date, max_retail_price FROM eub_regulations WHERE effective_date >= ? ORDER BY effective_date ASC").bind(start_date_history).all();
+      const eub_map = new Map(history_eub.results.map(r => [r.effective_date, r.max_retail_price]));
+      
+      const dates = [], nymex_prices = [], nb_prices = [];
+      let last_known_eub = latest_eub.max_retail_price;
+      history_market.results.forEach(row => {
+          dates.push(row.trading_date);
+          nymex_prices.push(row.base_cad_liter);
+          if (eub_map.has(row.trading_date)) last_known_eub = eub_map.get(row.trading_date);
+          nb_prices.push(last_known_eub);
+      });
 
+      // 7. 组装响应
       return Response.json({
         metadata: {
           last_sync: now_nb.toISOString(),
@@ -139,13 +118,23 @@ export default {
           current_nb_price: latest_eub.max_retail_price,
           nb_delta: Math.round(nb_delta * 10) / 10,
           prediction: {
-            change: display_total, direction, risk_level,
-            cumulative_drift: Math.round(cumulative_drift * 100) / 100,
-            daily_spike: Math.round(daily_spike * 100) / 100,
-            window: { locked_days: window_stats.locked_days || 0, progress: Math.round(((window_stats.locked_days || 0) / 5) * 100), breakdown }
+            change: display_total,
+            direction: display_total > 0.1 ? "up" : display_total < -0.1 ? "down" : "stable",
+            risk_level: interrupter_alert ? "red" : (Math.abs(cumulative_delta) >= 3.5 ? "yellow" : "green"),
+            is_blackout,
+            interrupter_type,
+            interrupter_reason,
+            attribution: { commodity: Math.round(comm_impact * 100) / 100, fx: Math.round(fx_impact * 100) / 100 },
+            cumulative_drift: Math.round(cumulative_delta * 100) / 100,
+            daily_spike: Math.round(Math.abs((recentTrades[0]?.base_cad_liter || 0) - (recentTrades[1]?.base_cad_liter || 0)) * 100) / 100,
+            window: { 
+                locked_days: recentTrades.filter(r => target_5_days.includes(r.trading_date)).length,
+                progress: Math.round((recentTrades.filter(r => target_5_days.includes(r.trading_date)).length / 5) * 100),
+                breakdown 
+            }
           }
         },
-        dates, nymex_prices: nymex_series, nb_prices: nb_series
+        dates, nymex_prices, nb_prices
       }, { headers: { "Access-Control-Allow-Origin": "*" } });
 
     } catch (e) {
