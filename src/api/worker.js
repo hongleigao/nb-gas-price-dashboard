@@ -1,7 +1,7 @@
 /**
  * NB Gas Pulse - Cloudflare Worker (The Brain)
  * 职责：整合专家建议的 3日滚动均值逻辑 + 法定静默期判定
- * 版本：2.2.0 (Final-Close Data Only)
+ * 版本：2.2.1 (Handle Legacy NULL is_final)
  */
 
 export default {
@@ -39,8 +39,8 @@ export default {
       if (market_data.results.length < 3) throw new Error("市场数据不足");
       const recentTrades = market_data.results;
 
-      // 3. 获取最近一次收盘记录 (用于归因分析和基准对比)
-      const latestFinal = recentTrades.find(r => r.is_final === 1) || recentTrades[0];
+      // 3. 获取最近一次收盘记录 (兼容处理：NULL 视为已收盘)
+      const latestFinal = recentTrades.find(r => r.is_final === 1 || r.is_final === null) || recentTrades[0];
 
       // 4. 熔断机制判定 (仅基于已收盘数据)
       let interrupter_alert = false;
@@ -51,7 +51,8 @@ export default {
       const is_blackout = (day_of_week === 2 || day_of_week === 3);
       
       if (!is_blackout) {
-        const finalTrades = recentTrades.filter(r => r.is_final === 1).slice(0, 3);
+        // 兼容处理：treat null as 1 (Final)
+        const finalTrades = recentTrades.filter(r => r.is_final === 1 || r.is_final === null).slice(0, 3);
         if (finalTrades.length >= 3) {
             const rollingAvg3Days = finalTrades.reduce((sum, row) => sum + row.base_cad_liter, 0) / 3;
             cumulative_delta = rollingAvg3Days - activeBase;
@@ -77,8 +78,8 @@ export default {
       const target_5_days = window_dates.slice(-5);
       const market_map = new Map(recentTrades.map(r => [r.trading_date, r]));
 
-      // 6. 精准窗口预测 (仅平均已收盘的日期)
-      const windowFinalTrades = recentTrades.filter(r => target_5_days.includes(r.trading_date) && r.is_final === 1);
+      // 6. 精准窗口预测 (兼容处理：NULL 视为已收盘)
+      const windowFinalTrades = recentTrades.filter(r => target_5_days.includes(r.trading_date) && (r.is_final === 1 || r.is_final === null));
       const routineAvg = windowFinalTrades.length > 0 
           ? windowFinalTrades.reduce((sum, row) => sum + row.base_cad_liter, 0) / windowFinalTrades.length 
           : latestFinal.base_cad_liter;
@@ -95,11 +96,12 @@ export default {
 
       const breakdown = target_5_days.map(date_str => {
           const row = market_map.get(date_str);
+          const isFinal = row ? (row.is_final === null ? 1 : row.is_final) : 0;
           return {
               date: new Date(date_str + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
               day: new Date(date_str + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' }),
-              diff: (row && row.is_final === 1) ? Math.round((row.base_cad_liter - activeBase) * 1.15 * 10) / 10 : null,
-              is_final: row ? row.is_final : 0
+              diff: (row && isFinal === 1) ? Math.round((row.base_cad_liter - activeBase) * 1.15 * 10) / 10 : null,
+              is_final: isFinal
           };
       });
 
@@ -110,7 +112,7 @@ export default {
         ORDER BY effective_date DESC LIMIT 1
       `).first();
 
-      // 8. 历史趋势数据 (保持图表)
+      // 8. 历史趋势数据 (保持图表功能)
       const start_date_history = new Date(now_nb.getTime() - 730 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const history_market = await D1_DB.prepare("SELECT trading_date, base_cad_liter FROM nymex_market_data WHERE trading_date >= ? ORDER BY trading_date ASC").bind(start_date_history).all();
       const history_eub = await D1_DB.prepare("SELECT effective_date, max_retail_price FROM eub_regulations WHERE effective_date >= ? ORDER BY effective_date ASC").bind(start_date_history).all();
