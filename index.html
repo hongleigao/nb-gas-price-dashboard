@@ -385,54 +385,82 @@
                     else { summary = attr.fx > 0 ? "CAD weakness is dragging prices higher." : "Stronger CAD is providing price relief."; }
                     document.getElementById('driver-summary').innerText = summary;
 
-                    const riskFill = document.getElementById('risk-fill');
-                    const riskLabel = document.getElementById('risk-label');
-                    const riskPct = Math.min((Math.abs(p.accumulated_change) / 6.0) * 100, 100);
-                    riskFill.style.width = riskPct + "%";
-                    if (p.risk_level === 'red') { riskFill.style.background = "var(--accent-red)"; riskLabel.innerText = "Interrupter Risk: CRITICAL"; riskLabel.style.color = "var(--accent-red)"; }
-                    else if (p.risk_level === 'yellow') { riskFill.style.background = "#fbbf24"; riskLabel.innerText = "Interrupter Risk: ELEVATED"; riskLabel.style.color = "#fbbf24"; }
-                    else { riskFill.style.background = "var(--accent-green)"; riskLabel.innerText = "Interrupter Risk: LOW"; }
-
+                    // 4. 熔断风险与决策结论
                     animateValue("pred-val", 0, parseFloat(p.change), 1200, " ¢", true);
                     const decisionEl = document.getElementById('decision-text');
                     const summaryCard = document.querySelector('.summary-card');
                     const predDirEl = document.getElementById('pred-direction');
+                    const riskLabel = document.getElementById('risk-label');
+                    
                     const futurePump = (m.current_nb_price + p.change - 5.5).toFixed(1);
                     const absChange = Math.abs(p.change).toFixed(1);
+
+                    // 计算目标日期
                     const targetFri = new Date(now_nb);
                     let daysToFri = (5 - now_nb.getDay() + 7) % 7;
                     if (daysToFri === 0) daysToFri = 7;
                     targetFri.setDate(now_nb.getDate() + daysToFri);
-                    const friDateStr = targetFri.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                    const weekPrefix = daysToFri > 4 ? "next Friday" : "this Friday";
-                    const fullDateRef = `${weekPrefix} (${friDateStr})`;
+                    const fullDateRef = `${daysToFri > 4 ? "next Friday" : "this Friday"} (${targetFri.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
 
                     summaryCard.classList.remove('trend-up', 'trend-down', 'trend-stable');
-                    if (p.risk_level === 'red') { 
-                        decisionEl.innerText = "CRITICAL: EMERGENCY ACTION"; 
-                        decisionEl.style.color = "var(--accent-red)"; 
-                        const action = p.change > 0 ? "rise" : "drop";
-                        const advice = p.change > 0 ? "Fill your tank <b>immediately</b>." : "Wait for the <b>emergency drop</b>.";
-                        predDirEl.innerHTML = `Market volatility has breached the ±6¢ threshold. Regular gas may <b>${action} instantly</b> via an interrupter clause. ${advice}`; 
-                        summaryCard.classList.add('trend-up'); 
+
+                    // A. 优先级最高：熔断预警逻辑 (排除静默期)
+                    if (p.risk_level === 'red' && !p.is_blackout) {
+                        if (p.interrupter_type === 'hike') {
+                            decisionEl.innerText = "CRITICAL: EMERGENCY HIKE RISK";
+                            decisionEl.style.color = "var(--accent-red)";
+                            predDirEl.innerHTML = `Market benchmark has surged beyond the ±6¢ threshold. Regular gas may <b>rise instantly</b>. Fill your tank <b>immediately</b>.`;
+                            summaryCard.classList.add('trend-up');
+                        } else {
+                            decisionEl.innerText = "NOTICE: EMERGENCY DROP EXPECTED";
+                            decisionEl.style.color = "var(--accent-green)";
+                            predDirEl.innerHTML = `Market benchmark has plummeted. An <b>emergency price drop</b> is highly likely before Friday. Defer fueling to save.`;
+                            summaryCard.classList.add('trend-down');
+                        }
+                    } 
+                    // B. 常规调价逻辑 (包含静默期处理)
+                    else {
+                        if (p.direction === 'up') {
+                            decisionEl.innerText = "ADVISORY: BUY BEFORE FRIDAY";
+                            decisionEl.style.color = "var(--accent-red)";
+                            predDirEl.innerHTML = `Forecast indicates Regular gas will rise ⬆️ <b>${absChange} ¢</b> to approx. <b>${futurePump} ¢</b> ${fullDateRef}. Fueling recommended.`;
+                            summaryCard.classList.add('trend-up');
+                        } else if (p.direction === 'down') {
+                            decisionEl.innerText = "ADVISORY: WAIT FOR FRIDAY";
+                            decisionEl.style.color = "var(--accent-green)";
+                            predDirEl.innerHTML = `Forecast indicates Regular gas will drop ⬇️ <b>${absChange} ¢</b> to approx. <b>${futurePump} ¢</b> ${fullDateRef}. Wait for Friday relief.`;
+                            summaryCard.classList.add('trend-down');
+                        } else {
+                            decisionEl.innerText = "MARKET NEUTRAL";
+                            decisionEl.style.color = "var(--text-sub)";
+                            predDirEl.innerHTML = `Market stable. Regular gas expected to remain near <b>${futurePump} ¢</b> for ${fullDateRef}.`;
+                            summaryCard.classList.add('trend-stable');
+                        }
                     }
-                    else if (p.direction === 'up') { 
-                        decisionEl.innerText = "ADVISORY: BUY BEFORE FRIDAY"; 
-                        decisionEl.style.color = "var(--accent-red)"; 
-                        predDirEl.innerHTML = `Forecast indicates Regular gas will rise ⬆️ <b>${absChange} ¢</b> to approximately <b>${futurePump} ¢</b> ${fullDateRef}. Pre-emptive fueling recommended.`; 
-                        summaryCard.classList.add('trend-up');
-                    }
-                    else if (p.direction === 'down') { 
-                        decisionEl.innerText = "ADVISORY: WAIT FOR FRIDAY"; 
-                        decisionEl.style.color = "var(--accent-green)"; 
-                        predDirEl.innerHTML = `Forecast indicates Regular gas will drop ⬇️ <b>${absChange} ¢</b> to approximately <b>${futurePump} ¢</b> ${fullDateRef}. Defer fueling for better rates.`; 
-                        summaryCard.classList.add('trend-down');
-                    }
-                    else { 
-                        decisionEl.innerText = "MARKET NEUTRAL"; 
-                        decisionEl.style.color = "var(--text-sub)"; 
-                        predDirEl.innerHTML = `No significant variation expected. Regular gas should remain stable near <b>${futurePump} ¢</b> for the ${fullDateRef} cycle.`; 
-                        summaryCard.classList.add('trend-stable');
+
+                    // 风险仪展示：如果在静默期，强制转绿并提示
+                    const riskPct = Math.min((Math.abs(p.cumulative_drift) / 6.0) * 100, 100);
+                    const riskFill = document.getElementById('risk-fill');
+                    riskFill.style.width = riskPct + "%";
+
+                    if (p.is_blackout) {
+                        riskFill.style.background = "var(--text-sub)";
+                        riskLabel.innerText = "Interrupter Risk: BLACKOUT WINDOW";
+                        riskLabel.style.color = "var(--text-sub)";
+                    } else {
+                        if (p.risk_level === 'red') {
+                            riskFill.style.background = "var(--accent-red)";
+                            riskLabel.innerText = `Interrupter Risk: CRITICAL (${p.cumulative_drift > 0 ? '+' : ''}${p.cumulative_drift}¢ drift)`;
+                            riskLabel.style.color = "var(--accent-red)";
+                        } else if (p.risk_level === 'yellow') {
+                            riskFill.style.background = "#fbbf24";
+                            riskLabel.innerText = `Interrupter Risk: ELEVATED (${p.cumulative_drift > 0 ? '+' : ''}${p.cumulative_drift}¢ drift)`;
+                            riskLabel.style.color = "#fbbf24";
+                        } else {
+                            riskFill.style.background = "var(--accent-green)";
+                            riskLabel.innerText = "Interrupter Risk: NOMINAL";
+                            riskLabel.style.color = "var(--accent-green)";
+                        }
                     }
                     const lastSync = new Date(m.last_sync);
                     const formattedTime = lastSync.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });

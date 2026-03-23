@@ -13,9 +13,11 @@ CREATE TABLE nymex_market_data (
 DROP TABLE IF EXISTS eub_regulations;
 CREATE TABLE eub_regulations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    effective_date DATE UNIQUE NOT NULL, -- 核心：添加 UNIQUE 约束
+    effective_date DATE UNIQUE NOT NULL, 
     max_retail_price REAL NOT NULL,
     actual_pump_price REAL NOT NULL,
     active_eub_base REAL NOT NULL,
+    rbob_usd_gal REAL, -- 调价时的 RBOB 基准
+    cad_usd_rate REAL, -- 调价时的汇率基准
     is_interrupter BOOLEAN DEFAULT 0 
 );
