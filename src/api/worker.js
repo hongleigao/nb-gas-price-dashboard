@@ -27,19 +27,26 @@ export default {
       const current_iso = now_nb.toISOString().split('T')[0];
       const day_of_week = now_nb.getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
 
-      // 2. 获取最近 7 个交易日的市场数据 (专家建议)
+      // 2. 获取最近 10 个交易日的市场数据 (确保覆盖计价窗口)
       const market_data = await D1_DB.prepare(`
         SELECT trading_date, base_cad_liter, rbob_usd_gal, cad_usd_rate
         FROM nymex_market_data 
         WHERE is_holiday = 0 AND trading_date <= ?
         ORDER BY trading_date DESC 
-        LIMIT 7
+        LIMIT 10
       `).bind(current_iso).all();
 
       if (market_data.results.length < 3) throw new Error("市场数据不足");
       const recentTrades = market_data.results;
 
-      // 3. 熔断机制判定 (Interrupter Clause) - 专家算法
+      // 3. 获取最近一次熔断记录 (Context)
+      const last_interrupter = await D1_DB.prepare(`
+        SELECT effective_date FROM eub_regulations 
+        WHERE is_interrupter = 1 
+        ORDER BY effective_date DESC LIMIT 1
+      `).first();
+
+      // 4. 熔断机制判定 (Interrupter Clause) - 专家算法
       let interrupter_alert = false;
       let interrupter_type = "none";
       let interrupter_reason = "市场平稳";
@@ -62,21 +69,6 @@ export default {
         interrupter_reason = "处于法定调价静默期 (周二/周三)";
       }
 
-      // 4. 常规周四预测 (Routine Thursday) & 归因分析
-      const routineAvg = recentTrades.reduce((sum, row) => sum + row.base_cad_liter, 0) / recentTrades.length;
-      const display_total = Math.round((routineAvg - activeBase) * 1.15 * 10) / 10;
-      
-      // 归因分析 (专家优化版：解决 0 ¢ 驱动问题)
-      const cur_rbob = recentTrades[0].rbob_usd_gal;
-      const cur_fx = recentTrades[0].cad_usd_rate;
-      
-      // 如果 D1 里的 EUB 记录没有基准值 (初次运行或导入数据)，则自动回溯获取最近市场数据作为基准
-      const ref_rbob = latest_eub.rbob_usd_gal || (recentTrades.length > 1 ? recentTrades[recentTrades.length - 1].rbob_usd_gal : cur_rbob);
-      const ref_fx = latest_eub.cad_usd_rate || (recentTrades.length > 1 ? recentTrades[recentTrades.length - 1].cad_usd_rate : cur_fx);
-
-      const comm_impact = ((cur_rbob - ref_rbob) * ref_fx / 3.7854) * 1.15 * 100;
-      const fx_impact = (cur_rbob * (cur_fx - ref_fx) / 3.7854) * 1.15 * 100;
-
       // 5. 构造 5 日窗口明细表 (用于 UI 日历)
       const days_to_thu = (4 - day_of_week + 7) % 7 || 7;
       const next_thu = new Date(now_nb.getTime() + days_to_thu * 24 * 60 * 60 * 1000);
@@ -87,6 +79,22 @@ export default {
       }
       const target_5_days = window_dates.slice(-5);
       const market_map = new Map(recentTrades.map(r => [r.trading_date, r.base_cad_liter]));
+
+      // 6. 精准窗口预测 (Only average the dates within target_5_days)
+      const windowTrades = recentTrades.filter(r => target_5_days.includes(r.trading_date));
+      const routineAvg = windowTrades.length > 0 
+          ? windowTrades.reduce((sum, row) => sum + row.base_cad_liter, 0) / windowTrades.length 
+          : recentTrades[0].base_cad_liter;
+      const display_total = Math.round((routineAvg - activeBase) * 1.15 * 10) / 10;
+      
+      // 归因分析 (针对即时 Spot 价)
+      const cur_rbob = recentTrades[0].rbob_usd_gal;
+      const cur_fx = recentTrades[0].cad_usd_rate;
+      const ref_rbob = latest_eub.rbob_usd_gal || (recentTrades.length > 1 ? recentTrades[recentTrades.length - 1].rbob_usd_gal : cur_rbob);
+      const ref_fx = latest_eub.cad_usd_rate || (recentTrades.length > 1 ? recentTrades[recentTrades.length - 1].cad_usd_rate : cur_fx);
+
+      const comm_impact = ((cur_rbob - ref_rbob) * ref_fx / 3.7854) * 1.15 * 100;
+      const fx_impact = (cur_rbob * (cur_fx - ref_fx) / 3.7854) * 1.15 * 100;
 
       const breakdown = target_5_days.map(date_str => {
           const val = market_map.get(date_str);
@@ -117,6 +125,7 @@ export default {
         metadata: {
           last_sync: now_nb.toISOString(),
           nb_last_date: latest_eub.effective_date,
+          last_interrupter_date: last_interrupter ? last_interrupter.effective_date : null,
           current_nb_price: latest_eub.max_retail_price,
           nb_delta: Math.round(nb_delta * 10) / 10,
           prediction: {
@@ -126,7 +135,7 @@ export default {
             is_blackout,
             interrupter_type,
             interrupter_reason,
-            attribution: { commodity: Math.round(comm_impact * 100) / 100, fx: Math.round(fx_impact * 100) / 100 },
+            spot_attribution: { commodity: Math.round(comm_impact * 100) / 100, fx: Math.round(fx_impact * 100) / 100 },
             cumulative_drift: Math.round(cumulative_delta * 100) / 100,
             daily_spike: Math.round(Math.abs((recentTrades[0]?.base_cad_liter || 0) - (recentTrades[1]?.base_cad_liter || 0)) * 100) / 100,
             window: { 

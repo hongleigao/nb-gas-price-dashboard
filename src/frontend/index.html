@@ -214,7 +214,7 @@
                     <!-- A. 价格驱动力分析 -->
                     <div class="insight-hub">
                         <div class="attribution-viz">
-                            <div class="label" style="margin-bottom: 15px; font-size: 10px;">Price Driver Analysis</div>
+                            <div class="label" style="margin-bottom: 15px; font-size: 10px;">Instant Market Drive (Spot vs. Base)</div>
                             <div class="attr-item" style="font-size: 13px;">
                                 <div style="display: flex; justify-content: space-between;">
                                     <span style="color: var(--text-sub);">Global Market</span>
@@ -229,7 +229,7 @@
                                 </div>
                                 <div class="attr-bar-container"><div id="bar-fx" class="attr-bar-fill"></div></div>
                             </div>
-                            <div id="driver-summary" class="driver-text">--</div>
+                            <div id="driver-summary" class="driver-text" style="font-size: 11px; line-height: 1.4;">--</div>
                         </div>
                     </div>
 
@@ -238,6 +238,9 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                             <div class="label" style="margin-bottom: 0; font-size: 10px;">Market Window (5-Day Avg)</div>
                             <div id="base-reset-tag" style="display: none; font-size: 9px; font-weight: 700; color: var(--accent-red); border: 1px solid var(--accent-red); padding: 2px 6px; border-radius: 2px; letter-spacing: 1px;">BASE RESET</div>
+                        </div>
+                        <div id="last-reset-info" style="font-size: 10px; color: var(--text-sub); margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                            Base last reset on: <span id="reset-date" style="color: var(--accent-blue);">--</span>
                         </div>
                         <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
                             <tbody id="breakdown-body">
@@ -352,7 +355,10 @@
                     const win = p.window || {};
                     const breakdownBody = document.getElementById('breakdown-body');
                     const baseResetTag = document.getElementById('base-reset-tag');
+                    const resetDateEl = document.getElementById('reset-date');
+                    
                     breakdownBody.innerHTML = '';
+                    resetDateEl.innerText = m.last_interrupter_date || m.nb_last_date;
                     let hasInterrupter = false;
 
                     if (win.breakdown) {
@@ -372,7 +378,7 @@
                     }
                     if (hasInterrupter) baseResetTag.style.display = 'block';
 
-                    const attr = p.attribution || { commodity: 0, fx: 0 };
+                    const attr = p.spot_attribution || { commodity: 0, fx: 0 };
                     document.getElementById('attr-comm').innerText = (attr.commodity > 0 ? "+" : "") + attr.commodity.toFixed(2) + " ¢";
                     document.getElementById('attr-fx').innerText = (attr.fx > 0 ? "+" : "") + attr.fx.toFixed(2) + " ¢";
                     const barComm = document.getElementById('bar-comm');
@@ -384,12 +390,12 @@
                     let summary = "";
                     if (Math.abs(attr.commodity) < 0.01 && Math.abs(attr.fx) < 0.01) {
                         summary = "Market conditions remain synchronized with the current baseline.";
-                    } else if (Math.abs(attr.commodity) > Math.abs(attr.fx)) {
-                        summary = attr.commodity > 0 ? "Global market trend is pushing prices up." : "Global market relief is the primary driver.";
                     } else {
-                        summary = attr.fx > 0 ? "CAD weakness is dragging prices higher." : "Stronger CAD is providing price relief.";
+                        const mainDriver = Math.abs(attr.commodity) > Math.abs(attr.fx) ? "Global Market" : "Currency (CAD)";
+                        summary = `Current spot deviation is <b>${(attr.commodity + attr.fx).toFixed(2)}¢</b> (pre-tax). `;
+                        summary += `Note: Projection differs due to 5-day window smoothing.`;
                     }
-                    document.getElementById('driver-summary').innerText = summary;
+                    document.getElementById('driver-summary').innerHTML = summary;
 
                     // 4. 熔断风险与决策结论
                     animateValue("pred-val", 0, parseFloat(p.change), 1200, " ¢", true);
