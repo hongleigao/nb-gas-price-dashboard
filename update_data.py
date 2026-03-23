@@ -7,8 +7,12 @@ import yfinance as yf
 from datetime import datetime, timedelta
 import pytz
 import settings
+from dotenv import load_dotenv
 
-# 获取 GitHub Secrets
+# 加载本地 .env 文件 (如果存在)
+load_dotenv()
+
+# 获取环境变量 (无论是来自 .env 还是 GitHub Actions)
 CF_ACCOUNT_ID = os.environ.get('CLOUDFLARE_ACCOUNT_ID')
 CF_DATABASE_ID = os.environ.get('CLOUDFLARE_DATABASE_ID')
 CF_API_TOKEN = os.environ.get('CLOUDFLARE_API_TOKEN')

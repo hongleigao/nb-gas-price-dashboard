@@ -1,45 +1,30 @@
-# NB Gas Price Pulse - 架构白皮书 (Cloud Native V5.1)
+# NB Gas Price Pulse - 产品愿景与价值主张 (V5.1)
 
-本项目是一个基于 **Cloudflare Serverless 生态**的燃油价格智能监控系统，旨在通过第一性原理分析，消除受管制市场中的信息差。
-
----
-
-## 1. 核心架构 (System Architecture)
-
-### 1.1 数据闭环
-1.  **数据采集 (Pusher)**: GitHub Actions 定时运行 `update_data.py`，从 `yfinance` 抓取 NYMEX RBOB 与 USDCAD 汇率，并解析 NB EUB 官网 Excel 快照。
-2.  **持久化层 (D1 DB)**: Cloudflare D1 存储全量金融日线与监管调价历史，具备唯一性约束防止数据污染。
-3.  **计算引擎 (The Brain)**: Cloudflare Worker 在用户请求时执行 SQL 聚合，实时计算 5 日滑动窗口均值。
-4.  **决策 UI (Frontend)**: 基于工业精密风格设计，提供“行动建议”、“双价灯塔”和“归因拆解”。
+NB Gas Pulse 不仅仅是一个数据看板，它是专为 New Brunswick 居民打造的**燃油情报决策终端**。
 
 ---
 
-## 2. 预测算法逻辑 (M14 Model)
+## 1. 我们解决的问题 (The Problem)
+在 NB 省高度管制的燃油市场中，价格波动受复杂的 EUB（能源与公用事业委员会）窗口法控制。普通居民往往面临：
+*   **信息差**: 知道油价变了，但不知道为什么变。
+*   **决策焦虑**: 不确定该在周四晚上加油，还是等周五早上降价。
+*   **突发风险**: 害怕非计划内的“熔断调价”导致经济损失。
 
-### 2.1 价格构成因子 (Factors)
-*   **Market Variable (Commodity)**: NYMEX RBOB 汽油期货价格 (USD/Gallon)。
-*   **Currency Variable (FX)**: 美元兑加元汇率 (USDCAD)。
-*   **Tax Component (HST)**: NB 省统一销售税 (15%)。
-*   **Regulatory Constant**: 泵站价格与最高限价的固定价差 (-5.5 ¢)。
+## 2. 核心价值主张 (Value Proposition)
 
-### 2.2 调价窗口公式
-*   **Base Window (B)**: 当前官价生效日之前的 5 个交易日均值。
-*   **Target Window (T)**: 下周五调价对应的上周三至本周二 5 个交易日均值。
-*   **Predicted Change**: `(Avg(T) - Avg(B)) * 1.15`。
+### 2.1 消除黑盒 (Transparency)
+通过 **“归因拆解 (Price Drivers)”**，我们实时揭示国际原油市场与加元汇率对本地油价的拉动/拖累作用。
 
-### 2.3 熔断触发机制 (Interrupter Clause)
-*   **逻辑**: 当 `最近3日市场均值 - Base Window 均值` 的绝对值超过 **±6.0 ¢** 时，EUB 拥有在周五之外任何时间强制调价的法定权力。
-*   **UI 映射**: 
-    *   🟢 < 3.0¢: 低风险。
-    *   🟡 3.0 - 5.5¢: 预警。
-    *   🔴 > 5.5¢: 极高风险 (立即行动建议)。
+### 2.2 辅助决策 (Actionable Advice)
+系统不只是展示 `+2.5¢` 这种冷冰冰的数字，而是直接给出 **“ADVISORY: BUY BEFORE FRIDAY”** 这种行动建议，并预估变动后的真实价格。
 
----
+### 2.3 风险预警 (Risk Intelligence)
+**“熔断风险仪 (Interrupter Gauge)”** 24小时监控市场偏离度，在非计划调价发生前提供预警，保护用户的钱包。
 
-## 3. 产品哲学 (Product Vision)
-*   **去指标化**: 移除 REI 等噪音，只保留对用户决策有用的数字。
-*   **行动导向**: 文案直接告诉用户“涨到多少钱”、“今天还是明天加”。
-*   **渐进式展露**: 默认展示核心决策，为数据极客保留 Pro Mode 趋势分析。
+## 3. 产品哲学 (Product DNA)
+*   **精密 (Precision)**: 基于第一性原理还原 EUB 计价公式。
+*   **直觉 (Intuition)**: 工业精密风格 UI，用颜色和文案引导决策。
+*   **纯净 (Noise-free)**: 剔除 REI 等无效指标，专注高转化率信息。
 
 ---
-*Created by Gemini CLI - Consulting Team (2026-03-22)*
+*Fueling smarter decisions for New Brunswick.*
