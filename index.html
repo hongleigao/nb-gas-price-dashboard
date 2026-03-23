@@ -83,7 +83,7 @@
             padding: 40px;
             position: relative;
             overflow: hidden;
-            border-left: 4px solid var(--border-color); /* 默认无色 */
+            border-left: 4px solid var(--border-color);
             transition: border-left-color 0.5s ease;
         }
 
@@ -91,11 +91,19 @@
         .summary-card.trend-down { border-left-color: var(--accent-green); }
         .summary-card.trend-stable { border-left-color: var(--accent-blue); }
 
+        .decision-badge {
+            display: inline-block; padding: 6px 16px; border: 1px solid currentColor;
+            font-size: 13px; font-weight: 700; margin-bottom: 30px;
+        }
+
+        .main-value { font-family: var(--font-display); font-size: 84px; font-weight: 800; margin: 0; line-height: 1; }
+
+        .metrics-panel { display: flex; flex-direction: column; gap: 20px; }
+
         .price-beacon {
             display: flex; flex-direction: column; gap: 10px; padding: 25px;
             border: 1px solid var(--border-color);
             background: linear-gradient(145deg, #0d1117 0%, #05070a 100%);
-            /* 移除左侧强制蓝线 */
         }
 
         .price-item { display: flex; justify-content: space-between; align-items: baseline; }
@@ -154,7 +162,7 @@
 
     <div class="container">
         <header>
-            <h1>NB Gas Pulse</h1>
+            <h1>⛽ NB Gas Pulse</h1>
             <div class="market-status">
                 <div class="label">Effective Since</div>
                 <div id="current-date" style="font-size: 14px; font-weight: 600; color: var(--accent-blue);">--</div>
@@ -178,27 +186,9 @@
                     </div>
                     <div id="risk-label" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-sub);">Interrupter Risk: Nominal</div>
 
-                    <div id="pred-direction" style="margin-top: 25px; font-weight: 400; font-size: 15px; line-height: 1.6; color: var(--text-sub);">--</div>
+                    <div id="pred-direction" style="margin-top: 25px; font-weight: 400; font-size: 15px; line-height: 1.6; color: var(--text-sub); padding-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.05);">--</div>
                     
-                    <button class="pro-toggle" onclick="toggleProMode()">Institutional Details</button>
-                </section>
-
-                <aside class="metrics-panel">
-                    <!-- 双价格灯塔 -->
-                    <div class="price-beacon">
-                        <div class="price-item">
-                            <span class="price-label">Pump Price (Est.)</span>
-                            <span id="pump-val" class="price-val-main">--</span>
-                        </div>
-                        <div class="price-item" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
-                            <span class="price-label">EUB Max Ceiling</span>
-                            <span id="nb-val" class="price-val-sub">--</span>
-                        </div>
-                        <div id="nb-delta" style="font-size: 12px; font-weight: 700; text-align: right; margin-top: 5px;">--</div>
-                    </div>
-                    
-                    <!-- 预测分析舱 (Insight Hub) -->
-                    <div class="insight-hub">
+                    <div class="insight-hub" style="background: none; border: none; padding: 25px 0 0 0; gap: 30px;">
                         <div class="attribution-viz">
                             <div class="label" style="margin-bottom: 15px; font-size: 10px;">Price Driver Analysis</div>
                             <div class="attr-item" style="font-size: 13px;">
@@ -226,6 +216,22 @@
                             </div>
                             <div id="window-explanation" style="font-size: 10px; margin-top: 12px; color: var(--text-sub); line-height: 1.4; text-transform: uppercase; letter-spacing: 0.5px;">--</div>
                         </div>
+                    </div>
+
+                    <button class="pro-toggle" style="margin-top: 40px;" onclick="toggleProMode()">Institutional Details</button>
+                </section>
+
+                <aside class="metrics-panel">
+                    <div class="price-beacon">
+                        <div class="price-item">
+                            <span class="price-label">Current Pump Price (Est.)</span>
+                            <span id="pump-val" class="price-val-main">--</span>
+                        </div>
+                        <div class="price-item" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+                            <span class="price-label">Current EUB Max Ceiling</span>
+                            <span id="nb-val" class="price-val-sub">--</span>
+                        </div>
+                        <div id="nb-delta" style="font-size: 12px; font-weight: 700; text-align: right; margin-top: 5px;">--</div>
                     </div>
                 </aside>
             </div>
@@ -291,7 +297,6 @@
         function initChart() {
             if (!chartData || !document.getElementById('chart')) return;
             if (!myChart) myChart = echarts.init(document.getElementById('chart'), 'dark');
-            
             const markPoints = [];
             const nb_prices = chartData.nb_prices || [];
             for (let i = 1; i < nb_prices.length; i++) {
@@ -299,7 +304,6 @@
                     markPoints.push({ coord: [i, nb_prices[i]], symbolSize: 6, itemStyle: { color: '#f85149' } });
                 }
             }
-
             myChart.setOption({
                 backgroundColor: 'transparent',
                 tooltip: { trigger: 'axis', backgroundColor: '#0d1117', borderColor: '#30363d', textStyle: { color: '#ffffff' } },
@@ -321,17 +325,19 @@
                 chartData = data;
                 document.getElementById('skeleton-container').style.display = 'none';
                 document.getElementById('real-content').style.display = 'block';
-                
                 if (data.metadata) {
                     const m = data.metadata;
+                    const now_nb = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Moncton"}));
+                    
                     document.getElementById('current-date').innerText = m.nb_last_date;
                     animateValue("nb-val", 0, m.current_nb_price, 1000, " ¢", false);
                     animateValue("pump-val", 0, m.current_nb_price - 5.5, 1000, " ¢", false);
                     document.getElementById('nb-delta').innerHTML = m.nb_delta > 0 ? `<span style="color:var(--accent-red)">+${m.nb_delta.toFixed(1)}</span>` : (m.nb_delta < 0 ? `<span style="color:var(--accent-green)">${m.nb_delta.toFixed(1)}</span>` : `STABLE`);
                     
-                    const p = m.prediction;
-                    const days = p.window.locked_days || 0;
-                    const pct = p.window.progress || 0;
+                    const p = m.prediction || {};
+                    const win = p.window || {};
+                    const days = win.locked_days || 0;
+                    const pct = win.progress || 0;
                     document.getElementById('window-locked-text').innerText = `${days} of 5 days locked`;
                     setTimeout(() => document.getElementById('window-fill').style.width = pct + "%", 200);
                     
@@ -341,20 +347,19 @@
                     else if (pct >= 60) { confEl.innerText = "Data Confidence: HIGH"; explEl.innerText = `${days} days fixed. Trend is highly probable.`; }
                     else { confEl.innerText = "Data Confidence: PREDICTIVE"; explEl.innerText = "Initial data in. High volatility expected."; }
 
-                    const comm = p.attribution.commodity;
-                    const fx = p.attribution.fx;
-                    document.getElementById('attr-comm').innerText = (comm > 0 ? "+" : "") + comm.toFixed(1) + " ¢";
-                    document.getElementById('attr-fx').innerText = (fx > 0 ? "+" : "") + fx.toFixed(1) + " ¢";
+                    const attr = p.attribution || { commodity: 0, fx: 0 };
+                    document.getElementById('attr-comm').innerText = (attr.commodity > 0 ? "+" : "") + attr.commodity.toFixed(1) + " ¢";
+                    document.getElementById('attr-fx').innerText = (attr.fx > 0 ? "+" : "") + attr.fx.toFixed(1) + " ¢";
                     const barComm = document.getElementById('bar-comm');
                     const barFx = document.getElementById('bar-fx');
-                    barComm.style.width = Math.min((Math.abs(comm) / 5.0) * 100, 100) + "%";
-                    barComm.style.background = comm > 0 ? "var(--accent-red)" : "var(--accent-green)";
-                    barFx.style.width = Math.min((Math.abs(fx) / 5.0) * 100, 100) + "%";
-                    barFx.style.background = fx > 0 ? "var(--accent-red)" : "var(--accent-green)";
+                    barComm.style.width = Math.min((Math.abs(attr.commodity) / 5.0) * 100, 100) + "%";
+                    barComm.style.background = attr.commodity > 0 ? "var(--accent-red)" : "var(--accent-green)";
+                    barFx.style.width = Math.min((Math.abs(attr.fx) / 5.0) * 100, 100) + "%";
+                    barFx.style.background = attr.fx > 0 ? "var(--accent-red)" : "var(--accent-green)";
 
                     let summary = "";
-                    if (Math.abs(comm) > Math.abs(fx)) { summary = comm > 0 ? "Global market trend is pushing prices up." : "Global market relief is the primary driver."; }
-                    else { summary = fx > 0 ? "CAD weakness is dragging prices higher." : "Stronger CAD is providing price relief."; }
+                    if (Math.abs(attr.commodity) > Math.abs(attr.fx)) { summary = attr.commodity > 0 ? "Global market trend is pushing prices up." : "Global market relief is the primary driver."; }
+                    else { summary = attr.fx > 0 ? "CAD weakness is dragging prices higher." : "Stronger CAD is providing price relief."; }
                     document.getElementById('driver-summary').innerText = summary;
 
                     const riskFill = document.getElementById('risk-fill');
@@ -368,32 +373,43 @@
                     animateValue("pred-val", 0, parseFloat(p.change), 1200, " ¢", true);
                     const decisionEl = document.getElementById('decision-text');
                     const summaryCard = document.querySelector('.summary-card');
-                    
-                    // 移除旧类名
-                    summaryCard.classList.remove('trend-up', 'trend-down', 'trend-stable');
+                    const predDirEl = document.getElementById('pred-direction');
+                    const futurePump = (m.current_nb_price + p.change - 5.5).toFixed(1);
+                    const absChange = Math.abs(p.change).toFixed(1);
 
+                    const targetFri = new Date(now_nb);
+                    let daysToFri = (5 - now_nb.getDay() + 7) % 7;
+                    if (daysToFri === 0) daysToFri = 7;
+                    targetFri.setDate(now_nb.getDate() + daysToFri);
+                    const friDateStr = targetFri.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    const weekPrefix = daysToFri > 4 ? "next Friday" : "this Friday";
+                    const fullDateRef = `${weekPrefix} (${friDateStr})`;
+
+                    summaryCard.classList.remove('trend-up', 'trend-down', 'trend-stable');
                     if (p.risk_level === 'red') { 
                         decisionEl.innerText = "CRITICAL: EMERGENCY ACTION"; 
                         decisionEl.style.color = "var(--accent-red)"; 
-                        document.getElementById('pred-direction').innerHTML = `Immediate non-standard price hike detected. Fill your tank now.`; 
-                        summaryCard.classList.add('trend-up'); // 熔断通常伴随剧烈上涨
+                        const action = p.change > 0 ? "rise" : "drop";
+                        const advice = p.change > 0 ? "Fill your tank <b>immediately</b>." : "Wait for the <b>emergency drop</b>.";
+                        predDirEl.innerHTML = `Market volatility has breached the ±6¢ threshold. Regular gas may <b>${action} instantly</b> via an interrupter clause. ${advice}`; 
+                        summaryCard.classList.add('trend-up'); 
                     }
                     else if (p.direction === 'up') { 
                         decisionEl.innerText = "ADVISORY: BUY BEFORE FRIDAY"; 
                         decisionEl.style.color = "var(--accent-red)"; 
-                        document.getElementById('pred-direction').innerHTML = `Forecast indicates an upward jump this Friday morning. Pre-emptive fueling recommended.`; 
+                        predDirEl.innerHTML = `Forecast indicates Regular gas will rise ⬆️ <b>${absChange} ¢</b> to approximately <b>${futurePump} ¢</b> ${fullDateRef}. Pre-emptive fueling recommended.`; 
                         summaryCard.classList.add('trend-up');
                     }
                     else if (p.direction === 'down') { 
                         decisionEl.innerText = "ADVISORY: WAIT FOR FRIDAY"; 
                         decisionEl.style.color = "var(--accent-green)"; 
-                        document.getElementById('pred-direction').innerHTML = `Price drop anticipated this Friday morning. Defer purchases until the new ceiling takes effect.`; 
+                        predDirEl.innerHTML = `Forecast indicates Regular gas will drop ⬇️ <b>${absChange} ¢</b> to approximately <b>${futurePump} ¢</b> ${fullDateRef}. Defer fueling for better rates.`; 
                         summaryCard.classList.add('trend-down');
                     }
                     else { 
                         decisionEl.innerText = "MARKET NEUTRAL"; 
                         decisionEl.style.color = "var(--text-sub)"; 
-                        document.getElementById('pred-direction').innerHTML = `Stable pricing expected. No immediate action required.`; 
+                        predDirEl.innerHTML = `No significant variation expected. Regular gas should remain stable near <b>${futurePump} ¢</b> for the ${fullDateRef} cycle.`; 
                         summaryCard.classList.add('trend-stable');
                     }
 
@@ -408,7 +424,6 @@
                 document.getElementById('skeleton-container').innerHTML = "<p>Data synchronization failure.</p>";
                 console.error(err);
             });
-
         window.onresize = () => myChart && myChart.resize();
     </script>
 </body>
