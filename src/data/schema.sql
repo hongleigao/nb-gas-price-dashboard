@@ -7,6 +7,7 @@ CREATE TABLE nymex_market_data (
     rbob_usd_gal REAL NOT NULL,
     cad_usd_rate REAL NOT NULL,
     base_cad_liter REAL NOT NULL,
+    is_final INTEGER DEFAULT 1, -- 0: Intraday, 1: Final Close
     is_holiday BOOLEAN DEFAULT 0
 );
 
