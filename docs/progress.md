@@ -1,27 +1,26 @@
-## 会话：2026-03-23 (项目审计与结构重组)
+## 会话：2026-03-23 (自动化部署集成)
 
-### 阶段 7.5：项目结构重组
+### 阶段 8：生产级稳健性优化 (V5.2)
 - **状态：** complete
 - **开始时间：** 2026-03-23
 - 执行的操作：
-  - **深度审计**：识别并修复了 `worker.js` 中的归因分析基准回溯逻辑，解决了显示 `0.00 ¢` 的问题。
-  - **UI 优化**：修正了 `index.html` 中的动画 0 值显示符号，并优化了全 0 市场波动下的提示文案。
-  - **结构重组**：实施了 **Option A** 目录结构，将 30+ 个杂乱文件按科技栈归类到 `src/`, `scripts/`, `tests/` 等目录。
-  - **CI/CD 加固**：修正了 GitHub Actions 配置文件，确保仅发布 `src/frontend` 目录，提升安全性。
-  - **TDD 验证**：编写并运行了 `verify_logic_v5.py` (逻辑仿真) 和 `test_ui_v5.py` (Playwright 界面测试)，所有测试均通过。
+  - **自动化部署**：成功集成 `cloudflare/wrangler-action`，实现了 Worker 的全量 GitOps 部署。
+  - **权限加固**：识别并修复了 Cloudflare API Token 权限缺失问题 (需补齐 `User Details: Read`, `Workers: Edit`, `D1: Edit`)。
+  - **环境一致性**：同步了 `wrangler.toml` 与 GitHub Secrets 中的 D1 绑定 ID。
+  - **配置优化**：引入了 `package.json` 明确 Wrangler 依赖，解决了 `npx` 权限交互导致的部署中断。
 - 创建/修改的文件：
-  - `docs/ARCHITECTURE.md`, `docs/task_plan.md`
+  - `wrangler.toml`, `package.json`
   - `.github/workflows/main.yml`
-  - `src/data/seed_eub_history.py`, `src/data/init_db.py`, `src/data/seed_history.py`
-  - `index.html`, `worker.js`
+  - `docs/task_plan.md`, `docs/progress.md`
 
 ## 五问重启检查
 | 问题 | 答案 |
 |------|------|
-| 我在哪里？ | 架构精简与维护阶段 |
-| 我要去哪里？ | 阶段 8：多能源监控扩展 (Diesel/Furnace Oil) |
-| 目标是什么？ | 建立一个高专业度、易维护的 Serverless 油价监控终端 |
-| 我学到了什么？ | 合理的目录结构与 TDD 验证是大型 Serverless 项目不崩坏的基石。 |
-| 我做了什么？ | 完成了逻辑审计、Bug 修复、目录重组、CI/CD 适配以及全链路自动化验证。 |
+| 我在哪里？ | 生产环境加固阶段 |
+| 我要去哪里？ | 阶段 8.2：多能源监控扩展 (Diesel/Furnace Oil) |
+| 目标是什么？ | 实现全能源（汽油/柴油/取暖油）的统一监控与预测 |
+| 我学到了什么？ | Cloudflare API Token 的权限粒度非常精细，自动化工具依赖 `User Details: Read` 进行身份确认。 |
+| 我做了什么？ | 完成了 Worker 自动部署流水线，修复了 CI/CD 报错，并清理了重构后的项目结构。 |
+
 
 ## 会话：2026-03-22 (V5.1 架构大重构)
