@@ -29,7 +29,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas yfinance xlrd openpyxl pytz requests
+          pip install pandas yfinance xlrd openpyxl pytz requests python-dotenv
 
       - name: Run ETL & Push to Cloudflare D1
         env:
