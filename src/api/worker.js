@@ -125,6 +125,7 @@ export default {
         metadata: {
           last_sync: now_nb.toISOString(),
           nb_last_date: latest_eub.effective_date,
+          market_data_last_date: recentTrades[0].trading_date,
           last_interrupter_date: last_interrupter ? last_interrupter.effective_date : null,
           current_nb_price: latest_eub.max_retail_price,
           nb_delta: Math.round(nb_delta * 10) / 10,

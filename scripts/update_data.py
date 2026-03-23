@@ -41,6 +41,9 @@ def fetch_market_data():
         # 专家方法：使用 Ticker 直接获取最近数据
         rbob_ticker = yf.Ticker("RB=F")
         rbob_hist = rbob_ticker.history(period="5d")
+        
+        # 核心：获取真实的交易日期 (从 Index 中提取最新日期)
+        actual_trading_date = rbob_hist.index[-1].strftime('%Y-%m-%d')
         latest_rbob = float(rbob_hist['Close'].iloc[-1])
 
         cad_ticker = yf.Ticker("CAD=X")
@@ -50,8 +53,9 @@ def fetch_market_data():
         # 核心转换公式：(每加仑美元 * 加元汇率) / 3.7854 * 100
         base_cad_liter = round((latest_rbob * latest_cad) / 3.7854 * 100, 2)
         
-        print(f"数据处理完毕: RBOB=${latest_rbob:.4f}, 汇率={latest_cad:.4f}, 基准加分={base_cad_liter}¢")
+        print(f"数据处理完毕: 交易日期={actual_trading_date}, RBOB=${latest_rbob:.4f}, 汇率={latest_cad:.4f}, 基准加分={base_cad_liter}¢")
         return {
+            "trading_date": actual_trading_date,
             "rbob_usd_gal": latest_rbob,
             "cad_usd_rate": latest_cad,
             "base_cad_liter": base_cad_liter
@@ -96,6 +100,8 @@ def main():
     try:
         # 1. 采集并同步金融行情
         market = fetch_market_data()
+        trading_date_str = market["trading_date"] # 使用真实交易日期
+        
         sql_market = """
             INSERT INTO nymex_market_data (trading_date, rbob_usd_gal, cad_usd_rate, base_cad_liter)
             VALUES (?, ?, ?, ?)
