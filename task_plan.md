@@ -10,16 +10,17 @@
 
 ## 各阶段状态
 
-### 阶段 7：Serverless 数据库化重构 (进行中)
+### 阶段 7：Serverless 数据库化重构 (已完成)
 - [x] **基础设施定义 (Schema)**：创建 `schema.sql` (nymex_market_data, eub_regulations)。
-- [ ] **数据推送器重构 (Pusher)**：修改 `update_data.py` 使用 Cloudflare D1 REST API 进行写入。
-- [ ] **核心 API 开发 (The Brain)**：编写 Cloudflare Worker 逻辑，实现 SQL 窗口均值聚合与归因拆解。
-- [ ] **UI 动态适配**：前端切换至 Worker API。
-- **状态：** in_progress
+- [x] **数据推送器重构 (Pusher)**：重构 `update_data.py` 使用 Cloudflare D1 REST API 进行写入。
+- [x] **核心 API 开发 (The Brain)**：编写 Cloudflare Worker 实现 SQL 窗口聚合、归因拆解与日历轴补全。
+- [x] **UI 动态适配**：重构 `index.html` 接入 Worker API，实现工业精密风格 UI。
+- **状态：** complete
 
 ## 关键发现记录
-1. **专家审计结论**：高度管制市场下，REI 指标毫无价值。系统应通过“熔断风险仪”、“计价沙漏”和“归因拆解”来透明化 EUB 调价黑盒。
-2. **重构优势**：引入 D1 后，复杂的“上周三至本周二均值计算”可在 SQL 层直接完成，彻底解耦数据与展现。
+1. **专家审计结论**：高度管制市场下，REI 指标毫无价值。系统应通过“熔断风险仪”、“数据置信度”和“归因拆解”来透明化调价黑盒。
+2. **重构优势**：引入 D1 后，计算逻辑从 Python 迁移至 SQL/Worker，大幅提升了系统的实时性与可回测性。
+3. **视觉闭环**：通过 ⛽ 图标、动态语义化边框和直觉化文案，实现了从“数据看板”到“决策终端”的跨越。
 
 ## 已做决策
 | 决策 | 理由 |

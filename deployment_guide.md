@@ -1,58 +1,52 @@
-# NB Gas Price Pulse - 部署与运维实战指南 (V4.6)
+# NB Gas Price Pulse - 部署与运维实战指南 (V5.1)
 
-本项目采用 **“代码与数据分离”** 架构，使用 GitHub Actions 进行计算，Cloudflare Pages 进行全球加速。
+本项目已进化为 **“云原生 Serverless”** 架构：GitHub Actions 负责数据推送，Cloudflare D1 负责存储，Cloudflare Worker 负责逻辑计算。
 
 ---
 
-## 一、 GitHub 核心配置 (必须完成)
+## 一、 GitHub Actions 配置 (必须完成)
 
 ### 1. 开启自动化写权限
-为了让机器人能将数据推送到 `gh-pages` 分支：
-1.  进入 GitHub 仓库 **Settings** -> **Actions** -> **General**。
+为了让 Action 能够将网页更新推送到 `gh-pages` 分支：
+1.  进入仓库 **Settings** -> **Actions** -> **General**。
 2.  在 **Workflow permissions** 中，选择 **"Read and write permissions"**。
 3.  点击 **Save**。
 
-### 2. 移除 [skip ci] 逻辑
-当前版本的 `.github/workflows/main.yml` 已移除了 `[skip ci]` 标签。这确保了当机器人更新数据时，Cloudflare Pages 能够正确检测到变动并触发自动部署。
+### 2. 配置仓库机密 (Repository Secrets)
+必须配置以下三个变量，否则数据同步将失败：
+*   `CLOUDFLARE_ACCOUNT_ID`: 您的 Cloudflare 账户 ID。
+*   `CLOUDFLARE_DATABASE_ID`: D1 数据库的 UUID。
+*   `CLOUDFLARE_API_TOKEN`: 具有 D1 编辑权限的 API 令牌。
 
 ---
 
-## 二、 Cloudflare Pages 全自动上线
+## 二、 Cloudflare 基础设施部署
 
-1.  **关联仓库**：在 Cloudflare 控制台选择 **Workers & Pages** -> **Connect to Git**。
-2.  **核心构建设置 (Build Settings)**：
-    *   **Production branch**: 必须手动修改为 **`gh-pages`** (不要选 main)。
-    *   **Framework preset**: 选 `None`。
-    *   **Build command**: 保持 **留空**。
-    *   **Build output directory**: 输入一个点 **`.`**。
-3.  **自定义域名**：建议在 **Custom domains** 选项卡中添加您的子域名（如 `gas.jgao.app`）。
+### 1. D1 数据库初始化
+1.  在 Cloudflare 控制台创建 D1 数据库。
+2.  执行 `schema.sql` 中的 SQL 语句初始化表结构。
+3.  本地运行 `python seed_history.py` 和 `python seed_eub_history.py` 注入历史压舱石数据。
+
+### 2. Worker 计算大脑部署
+1.  创建一个新的 Cloudflare Worker。
+2.  在 **Settings** -> **Variables** -> **D1 database bindings** 中，将数据库绑定为变量名 **`D1_DB`**。
+3.  将项目中的 `worker.js` 代码粘贴到编辑器中并部署。
 
 ---
 
-## 三、 专家级冲突解决 (Git Rebase)
+## 三、 前端部署 (GitHub Pages)
 
-如果在 `main` 分支推送代码时遇到 `[rejected]` 错误，请执行以下命令强制以本地代码为准并同步云端数据：
-
-1.  **重置冲突状态**：`git rebase --abort`
-2.  **拉取并重排提交**：
-    ```powershell
-    git pull origin main --rebase -X ours
-    ```
-3.  **一气呵成推送**：
-    ```powershell
-    python update_data.py
-    git add .
-    git commit -m "Fix: Synced data and logic"
-    git push origin main
-    ```
+1.  确保 `index.html` 中的 `API_ENDPOINT` 已指向您的真实 Worker URL。
+2.  将代码推送至 GitHub `main` 分支。
+3.  GitHub Actions 会自动将静态页面部署到 `gh-pages` 分支。
 
 ---
 
 ## 四、 移动端安装 (PWA)
 
-*   **iOS**: 在 Safari 中点击“分享”按钮 -> **“添加到主屏幕”**。
-*   **Android**: 在 Chrome 中点击菜单按钮 -> **“安装应用”**。
-*   安装后，应用将以 **“Gas Pulse”** 命名，并具备独立的启动画面。
+*   **iOS**: 在 Safari 中点击“分享” -> **“添加到主屏幕”**。
+*   **Android**: 在 Chrome 中点击菜单 -> **“安装应用”**。
+*   安装后，应用将具备离线缓存功能和独立的启动画面。
 
 ---
-祝您的油价监控平台运行顺利！
+祝您的云原生油价监控平台运行顺利！

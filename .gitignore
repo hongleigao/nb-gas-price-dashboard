@@ -1,0 +1,16 @@
+# Environments
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.playwright-mcp/
+test_error.png
+dashboard_preview.png
+
+# Data
+data.json
