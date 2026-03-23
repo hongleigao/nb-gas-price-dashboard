@@ -113,7 +113,7 @@
 
         .insight-hub {
             display: flex; flex-direction: column; gap: 25px; padding: 25px;
-            background: rgba(255,255,255,0.02);
+            background: var(--surface-bg);
             border: 1px solid var(--border-color);
             border-radius: 4px;
         }
@@ -176,6 +176,7 @@
 
         <div id="real-content" style="display:none;">
             <div class="grid-layout">
+                <!-- 1. 左侧：极简决策卡 -->
                 <section class="summary-card">
                     <div id="decision-text" class="decision-badge">Analyzing Intelligence</div>
                     <div class="label">Projected Variation (Next Fri)</div>
@@ -186,9 +187,32 @@
                     </div>
                     <div id="risk-label" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-sub);">Interrupter Risk: Nominal</div>
 
-                    <div id="pred-direction" style="margin-top: 25px; font-weight: 400; font-size: 15px; line-height: 1.6; color: var(--text-sub); padding-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.05);">--</div>
+                    <div id="pred-direction" style="margin-top: 25px; font-weight: 400; font-size: 15px; line-height: 1.6; color: var(--text-sub);">--</div>
                     
-                    <div class="insight-hub" style="background: none; border: none; padding: 25px 0 0 0; gap: 30px;">
+                    <button class="pro-toggle" style="margin-top: 40px;" onclick="toggleProMode()">Institutional Details</button>
+                </section>
+
+                <!-- 2. 右侧：当前价格基准 -->
+                <aside class="metrics-panel">
+                    <div class="price-beacon">
+                        <div class="price-item">
+                            <span class="price-label">Current Pump Price (Est.)</span>
+                            <span id="pump-val" class="price-val-main">--</span>
+                        </div>
+                        <div class="price-item" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+                            <span class="price-label">Current EUB Max Ceiling</span>
+                            <span id="nb-val" class="price-val-sub">--</span>
+                        </div>
+                        <div id="nb-delta" style="font-size: 12px; font-weight: 700; text-align: right; margin-top: 5px;">--</div>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- 3. 隐藏层：全量专业分析 -->
+            <div id="pro-mode-content" class="pro-content">
+                <div class="grid-layout">
+                    <!-- A. 价格驱动力分析 -->
+                    <div class="insight-hub">
                         <div class="attribution-viz">
                             <div class="label" style="margin-bottom: 15px; font-size: 10px;">Price Driver Analysis</div>
                             <div class="attr-item" style="font-size: 13px;">
@@ -207,37 +231,27 @@
                             </div>
                             <div id="driver-summary" class="driver-text">--</div>
                         </div>
-
-                        <div class="confidence-box">
-                            <h3 id="confidence-level" style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-sub); margin: 0 0 10px 0;">Data Confidence</h3>
-                            <div id="window-locked-text" style="font-family: var(--font-display); font-size: 24px; font-weight: 700;">--</div>
-                            <div class="progress-container" style="margin-top: 10px;">
-                                <div id="window-fill" class="progress-bar" style="width: 0%;"></div>
-                            </div>
-                            <div id="window-explanation" style="font-size: 10px; margin-top: 12px; color: var(--text-sub); line-height: 1.4; text-transform: uppercase; letter-spacing: 0.5px;">--</div>
-                        </div>
                     </div>
 
-                    <button class="pro-toggle" style="margin-top: 40px;" onclick="toggleProMode()">Institutional Details</button>
-                </section>
-
-                <aside class="metrics-panel">
-                    <div class="price-beacon">
-                        <div class="price-item">
-                            <span class="price-label">Current Pump Price (Est.)</span>
-                            <span id="pump-val" class="price-val-main">--</span>
+                    <!-- B. 5日计价窗口明细 -->
+                    <div class="insight-hub">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <div class="label" style="margin-bottom: 0; font-size: 10px;">Market Window (5-Day Avg)</div>
+                            <div id="base-reset-tag" style="display: none; font-size: 9px; font-weight: 700; color: var(--accent-red); border: 1px solid var(--accent-red); padding: 2px 6px; border-radius: 2px; letter-spacing: 1px;">BASE RESET</div>
                         </div>
-                        <div class="price-item" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
-                            <span class="price-label">Current EUB Max Ceiling</span>
-                            <span id="nb-val" class="price-val-sub">--</span>
+                        <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+                            <tbody id="breakdown-body">
+                                <!-- 动态填充 -->
+                            </tbody>
+                        </table>
+                        <div style="font-size: 9px; color: var(--text-sub); margin-top: 15px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            * Deviation compared to current regulation base (tax included)
                         </div>
-                        <div id="nb-delta" style="font-size: 12px; font-weight: 700; text-align: right; margin-top: 5px;">--</div>
                     </div>
-                </aside>
-            </div>
+                </div>
 
-            <div id="pro-mode-content" class="pro-content">
-                <section class="chart-section">
+                <!-- C. 历史大趋势图 -->
+                <section class="chart-section" style="margin-top: 40px;">
                     <div class="label">NB Max vs. NYMEX Benchmark Spread Trend</div>
                     <div id="chart"></div>
                 </section>
@@ -328,7 +342,6 @@
                 if (data.metadata) {
                     const m = data.metadata;
                     const now_nb = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Moncton"}));
-                    
                     document.getElementById('current-date').innerText = m.nb_last_date;
                     animateValue("nb-val", 0, m.current_nb_price, 1000, " ¢", false);
                     animateValue("pump-val", 0, m.current_nb_price - 5.5, 1000, " ¢", false);
@@ -336,16 +349,27 @@
                     
                     const p = m.prediction || {};
                     const win = p.window || {};
-                    const days = win.locked_days || 0;
-                    const pct = win.progress || 0;
-                    document.getElementById('window-locked-text').innerText = `${days} of 5 days locked`;
-                    setTimeout(() => document.getElementById('window-fill').style.width = pct + "%", 200);
-                    
-                    const confEl = document.getElementById('confidence-level');
-                    const explEl = document.getElementById('window-explanation');
-                    if (pct >= 100) { confEl.innerText = "Data Confidence: FINALIZED"; explEl.innerText = "Full cycle complete. Mathematically firm."; }
-                    else if (pct >= 60) { confEl.innerText = "Data Confidence: HIGH"; explEl.innerText = `${days} days fixed. Trend is highly probable.`; }
-                    else { confEl.innerText = "Data Confidence: PREDICTIVE"; explEl.innerText = "Initial data in. High volatility expected."; }
+                    const breakdownBody = document.getElementById('breakdown-body');
+                    const baseResetTag = document.getElementById('base-reset-tag');
+                    breakdownBody.innerHTML = '';
+                    let hasInterrupter = false;
+
+                    if (win.breakdown) {
+                        win.breakdown.forEach(item => {
+                            const row = document.createElement('tr');
+                            row.style.borderBottom = '1px solid rgba(255,255,255,0.03)';
+                            let diffHtml = item.diff === null ? '<span style="color:var(--text-sub); font-size:11px;">PENDING</span>' : `<span style="color:${item.diff > 0 ? 'var(--accent-red)' : 'var(--accent-green)'}; font-weight:600;">${item.diff > 0 ? '+' : ''}${item.diff.toFixed(1)} ¢</span>`;
+                            row.innerHTML = `<td style="padding:10px 0; color:var(--text-sub);">${item.day} (${item.date}) ${item.is_interrupter ? '<span style="color:var(--accent-red); font-size:9px; margin-left:5px;">●</span>' : ''}</td><td style="padding:10px 0; text-align:right;">${diffHtml}</td>`;
+                            breakdownBody.appendChild(row);
+                            if (item.is_interrupter) {
+                                hasInterrupter = true;
+                                const divider = document.createElement('tr');
+                                divider.innerHTML = `<td colspan="2" style="padding:8px 0; border-bottom: 1px dashed var(--accent-red);"><div style="color:var(--accent-red); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; text-align:center;">Emergency Base Reset Applied</div></td>`;
+                                breakdownBody.appendChild(divider);
+                            }
+                        });
+                    }
+                    if (hasInterrupter) baseResetTag.style.display = 'block';
 
                     const attr = p.attribution || { commodity: 0, fx: 0 };
                     document.getElementById('attr-comm').innerText = (attr.commodity > 0 ? "+" : "") + attr.commodity.toFixed(2) + " ¢";
@@ -356,7 +380,6 @@
                     barComm.style.background = attr.commodity > 0 ? "var(--accent-red)" : "var(--accent-green)";
                     barFx.style.width = Math.min((Math.abs(attr.fx) / 5.0) * 100, 100) + "%";
                     barFx.style.background = attr.fx > 0 ? "var(--accent-red)" : "var(--accent-green)";
-
                     let summary = "";
                     if (Math.abs(attr.commodity) > Math.abs(attr.fx)) { summary = attr.commodity > 0 ? "Global market trend is pushing prices up." : "Global market relief is the primary driver."; }
                     else { summary = attr.fx > 0 ? "CAD weakness is dragging prices higher." : "Stronger CAD is providing price relief."; }
@@ -376,7 +399,6 @@
                     const predDirEl = document.getElementById('pred-direction');
                     const futurePump = (m.current_nb_price + p.change - 5.5).toFixed(1);
                     const absChange = Math.abs(p.change).toFixed(1);
-
                     const targetFri = new Date(now_nb);
                     let daysToFri = (5 - now_nb.getDay() + 7) % 7;
                     if (daysToFri === 0) daysToFri = 7;
@@ -412,7 +434,6 @@
                         predDirEl.innerHTML = `No significant variation expected. Regular gas should remain stable near <b>${futurePump} ¢</b> for the ${fullDateRef} cycle.`; 
                         summaryCard.classList.add('trend-stable');
                     }
-
                     const lastSync = new Date(m.last_sync);
                     const formattedTime = lastSync.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
                     const formattedDate = lastSync.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
