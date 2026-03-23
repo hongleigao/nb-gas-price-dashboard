@@ -38,18 +38,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: python scripts/update_data.py
 
-      - name: Diagnostic & Deploy
+      - name: Deploy Cloudflare Worker
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: |
-            echo "--- Checking Files ---"
-            ls -R src/api
-            echo "--- Checking Wrangler Auth ---"
-            npx wrangler whoami
-            echo "--- Deploying ---"
-            npx wrangler deploy
 
       - name: Deploy Frontend to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
