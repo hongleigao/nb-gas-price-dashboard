@@ -1,44 +1,45 @@
-# NB Gas Price Pulse - 架构白皮书 (Cloud Native V5.0)
+# NB Gas Price Pulse - 架构白皮书 (Cloud Native V5.1)
 
-本项目已进化为基于 **Cloudflare 生态的云原生数据中台**，实现了数据存储、逻辑计算与前端展示的彻底解耦。
-
----
-
-## 1. 系统架构 (System Architecture)
-
-### 1.1 数据流转闭环
-1.  **数据采集 (GitHub Actions)**：`update_data.py` 每日从 `yfinance` 抓取金融指标，解析 EUB 官网 Excel 获取限价快照。
-2.  **云端存储 (Cloudflare D1)**：采用分布式 SQLite 数据库，持久化存储 NYMEX 行情线与监管调价记录。
-3.  **按需计算 (Cloudflare Worker)**：在用户访问瞬间，通过 SQL 窗口函数完成均值聚合、归因拆解及日历轴补全。
-4.  **动态渲染 (GitHub Pages)**：前端通过 Fetch 调用 Worker API，实现秒级响应的交互式看板。
+本项目是一个基于 **Cloudflare Serverless 生态**的燃油价格智能监控系统，旨在通过第一性原理分析，消除受管制市场中的信息差。
 
 ---
 
-## 2. 核心逻辑规范 (Core Logic)
+## 1. 核心架构 (System Architecture)
 
-### 2.1 预测模型：第一性原理均值法 (M14)
-*   **计算窗口**：严格对齐 EUB 周期，取 **下周四调价对应的 T-8 至 T-2 交易日均值**。
-*   **预测 Delta**：`(New_Window_Avg - Current_Base_Avg) * 1.15 (HST)`。
-*   **归因拆解 (Attribution)**：
-    *   `Commodity Impact`：锁定汇率，由原油期货波动产生的贡献。
-    *   `FX Impact`：锁定原油，由加元汇率波动产生的贡献。
-
-### 2.2 熔断风险仪 (Interrupter Gauge)
-*   **监测频率**：实时。
-*   **逻辑**：`Current_3Day_Avg - Current_Base_Avg`。
-*   **阈值**：
-    *   🟢 **LOW**: < 3.0¢
-    *   🟡 **ELEVATED**: 3.0¢ - 5.5¢
-    *   🔴 **CRITICAL**: > 5.5¢ (可能触发提前调价)
+### 1.1 数据闭环
+1.  **数据采集 (Pusher)**: GitHub Actions 定时运行 `update_data.py`，从 `yfinance` 抓取 NYMEX RBOB 与 USDCAD 汇率，并解析 NB EUB 官网 Excel 快照。
+2.  **持久化层 (D1 DB)**: Cloudflare D1 存储全量金融日线与监管调价历史，具备唯一性约束防止数据污染。
+3.  **计算引擎 (The Brain)**: Cloudflare Worker 在用户请求时执行 SQL 聚合，实时计算 5 日滑动窗口均值。
+4.  **决策 UI (Frontend)**: 基于工业精密风格设计，提供“行动建议”、“双价灯塔”和“归因拆解”。
 
 ---
 
-## 3. 技术栈 (Tech Stack)
-*   **Database**: Cloudflare D1 (SQLite)
-*   **Backend**: Cloudflare Workers (JavaScript / SQL)
-*   **Data Ingestion**: Python (yfinance, pandas, requests)
-*   **Frontend**: Vanilla HTML/CSS/JS + ECharts
-*   **CI/CD**: GitHub Actions
+## 2. 预测算法逻辑 (M14 Model)
+
+### 2.1 价格构成因子 (Factors)
+*   **Market Variable (Commodity)**: NYMEX RBOB 汽油期货价格 (USD/Gallon)。
+*   **Currency Variable (FX)**: 美元兑加元汇率 (USDCAD)。
+*   **Tax Component (HST)**: NB 省统一销售税 (15%)。
+*   **Regulatory Constant**: 泵站价格与最高限价的固定价差 (-5.5 ¢)。
+
+### 2.2 调价窗口公式
+*   **Base Window (B)**: 当前官价生效日之前的 5 个交易日均值。
+*   **Target Window (T)**: 下周五调价对应的上周三至本周二 5 个交易日均值。
+*   **Predicted Change**: `(Avg(T) - Avg(B)) * 1.15`。
+
+### 2.3 熔断触发机制 (Interrupter Clause)
+*   **逻辑**: 当 `最近3日市场均值 - Base Window 均值` 的绝对值超过 **±6.0 ¢** 时，EUB 拥有在周五之外任何时间强制调价的法定权力。
+*   **UI 映射**: 
+    *   🟢 < 3.0¢: 低风险。
+    *   🟡 3.0 - 5.5¢: 预警。
+    *   🔴 > 5.5¢: 极高风险 (立即行动建议)。
 
 ---
-*Documented by Gemini CLI - 2026-03-22*
+
+## 3. 产品哲学 (Product Vision)
+*   **去指标化**: 移除 REI 等噪音，只保留对用户决策有用的数字。
+*   **行动导向**: 文案直接告诉用户“涨到多少钱”、“今天还是明天加”。
+*   **渐进式展露**: 默认展示核心决策，为数据极客保留 Pro Mode 趋势分析。
+
+---
+*Created by Gemini CLI - Consulting Team (2026-03-22)*

@@ -5,33 +5,29 @@
 ---
 
 ## ✅ 已完成 (Done)
-*   **[UX] 骨架屏加载 (Skeleton Loader)**：消除首屏加载的闪烁感。
-*   **[UX] Hero Card 布局**：将预测信息作为页面的绝对焦点。
-*   **[UI] 品牌重塑 (Pulse)**：确立了“NB Gas Price Pulse”品牌，增加了 ⛽ 图标及视觉规范。
-*   **[Algo] 物理均值引擎 (M14)**：废弃 Beta 平滑法，实现基于 EUB 第一性原理的预测逻辑。
-*   **[Algo] HST 全适配**：预测值直接包含 15% HST，实现与泵头价格 1:1 映射。
-*   **[Algo] 稳健中位数法**：Retail Spread 分析不再受异常值干扰。
-*   **[Infrastructure] 代码/数据分离架构**：实现了 `main` 和 `gh-pages` 分支隔离。
+*   **[Arch] 云原生架构演进 (V5.0)**：成功从静态 JSON 模式迁移至 Cloudflare D1 (DB) + Cloudflare Worker (API) 架构。
+*   **[UI] 工业精密视觉 (V5.1)**：实现了“双价格灯塔”、“分析舱”和动态语义化侧边线。
+*   **[UX] 产品化文案重构**：将术语转化为用户直觉，如“Data Confidence”和“Next Fri”。
+*   **[Data] 历史压舱石补录**：完成了 2 年金融行情与全量监管历史的云端注入。
 
 ---
 
-## 🚀 下一阶段核心任务 (The Next Step)
+## 🚀 下一阶段：V5.2 生产级稳健性优化
 
-### 1. 自动化算法回测 (Automated Backtesting) - **P0**
-*   **目标**：将 `backtest_analysis.py` 集成到 GitHub Actions。
-*   **功能**：每次调价后，自动在 GitHub Issue 或日志中生成“上周预测误差报告”，实现算法的闭环监控。
+### 1. 自动化部署 (GitHub -> Cloudflare) - **P0**
+*   **目标**：集成 Cloudflare Wrangler Action。
+*   **功能**：实现 `worker.js` 自动化部署，消除手动粘贴。
 
-### 2. 多能源扩展 (Multi-Fuel Support) - **P1**
-*   **目标**：引入 **Diesel (柴油)** 和 **Heating Oil (取暖油)**。
-*   **理由**：这是 NB 省非常核心的开支，能够吸引卡车司机和房主等高价值活跃用户。
+### 2. 多能源扩展 (Fuel Matrix) - **P1**
+*   **目标**：接入 **Diesel (柴油)** 与 **Furnace Oil (取暖油)**。
+*   **理由**：满足 NB 省冬季核心民生诉求，建立全品类燃油监控。
 
-### 3. 行动建议逻辑 (Action Index) - **P1**
-*   **目标**：不仅仅展示数字，而是直接展示“🔴 今晚加满”或“🟢 周四再加”。
-*   **UI**：在 Hero Card 中增加一个极简的红绿灯图标。
+### 3. 边缘计算优化 (Edge Caching) - **P1**
+*   **目标**：利用 Cloudflare 边缘缓存降低 D1 数据库查询压力。
+*   **功能**：实现 1 小时级别的 API 响应缓存。
 
-### 4. 社交传播图片生成 (Share Card) - **P2**
-*   **目标**：一键生成“预测周报”图片。
-*   **理由**：方便用户分享到 Facebook 的当地油价讨论群组，实现无成本的用户增长。
+### 4. 架构文档标准化 (Engineering Standard) - **P2**
+*   **目标**：将 `Project_idea.md` 和 `findings.md` 整合为行业标准的 `ARCHITECTURE.md` 和 `CONTRIBUTING.md`。
 
 ---
 *Created by Gemini CLI - Consulting Team*
