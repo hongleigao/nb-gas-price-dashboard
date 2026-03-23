@@ -84,14 +84,12 @@ def fetch_eub_regulation():
     }
 
 def main():
-    # 专家建议：时区处理与周末回溯
+    # 专家建议：时区处理
     nb_tz = pytz.timezone('America/Moncton')
     now = datetime.now(nb_tz)
     
-    # 如果是周末运行，强行取上一个周五的日期
-    if now.weekday() >= 5:
-        now = now - timedelta(days=now.weekday() - 4)
-    trading_date_str = now.strftime('%Y-%m-%d')
+    # 规则：如果 AST 时间在 18:15 之后，我们认为抓到的是该交易日的最终收盘价 (is_final=1)
+    is_final_flag = 1 if now.hour >= 18 else 0
 
     if not all([CF_ACCOUNT_ID, CF_DATABASE_ID, CF_API_TOKEN]):
         print("❌ 错误: 缺少 Cloudflare 凭证。")
@@ -103,15 +101,16 @@ def main():
         trading_date_str = market["trading_date"] # 使用真实交易日期
         
         sql_market = """
-            INSERT INTO nymex_market_data (trading_date, rbob_usd_gal, cad_usd_rate, base_cad_liter)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO nymex_market_data (trading_date, rbob_usd_gal, cad_usd_rate, base_cad_liter, is_final)
+            VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(trading_date) DO UPDATE SET 
             rbob_usd_gal=excluded.rbob_usd_gal,
             cad_usd_rate=excluded.cad_usd_rate,
-            base_cad_liter=excluded.base_cad_liter;
+            base_cad_liter=excluded.base_cad_liter,
+            is_final=excluded.is_final;
         """
-        push_to_d1(sql_market, [trading_date_str, market["rbob_usd_gal"], market["cad_usd_rate"], market["base_cad_liter"]])
-        print(f"✅ 金融行情同步成功: {market['base_cad_liter']} ¢/L ({trading_date_str})")
+        push_to_d1(sql_market, [trading_date_str, market["rbob_usd_gal"], market["cad_usd_rate"], market["base_cad_liter"], is_final_flag])
+        print(f"✅ 金融行情同步成功: {market['base_cad_liter']} ¢/L ({trading_date_str}, Final={is_final_flag})")
 
         # 2. 采集并同步 EUB 官方限价
         eub = fetch_eub_regulation()
