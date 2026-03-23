@@ -301,8 +301,9 @@
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
                 const current = (progress * (end - start) + start);
                 let sign = "";
-                if (showSymbol && current > 0.05) sign = "+";
-                obj.innerText = sign + current.toFixed(1) + suffix;
+                if (showSymbol && current >= 0.05) sign = "+";
+                if (showSymbol && current <= -0.05) sign = ""; // Negative already has -
+                obj.innerText = (Math.abs(current) < 0.05 ? "0.0" : (sign + current.toFixed(1))) + suffix;
                 if (progress < 1) window.requestAnimationFrame(step);
             };
             window.requestAnimationFrame(step);
@@ -381,8 +382,13 @@
                     barFx.style.width = Math.min((Math.abs(attr.fx) / 5.0) * 100, 100) + "%";
                     barFx.style.background = attr.fx > 0 ? "var(--accent-red)" : "var(--accent-green)";
                     let summary = "";
-                    if (Math.abs(attr.commodity) > Math.abs(attr.fx)) { summary = attr.commodity > 0 ? "Global market trend is pushing prices up." : "Global market relief is the primary driver."; }
-                    else { summary = attr.fx > 0 ? "CAD weakness is dragging prices higher." : "Stronger CAD is providing price relief."; }
+                    if (Math.abs(attr.commodity) < 0.01 && Math.abs(attr.fx) < 0.01) {
+                        summary = "Market conditions remain synchronized with the current baseline.";
+                    } else if (Math.abs(attr.commodity) > Math.abs(attr.fx)) {
+                        summary = attr.commodity > 0 ? "Global market trend is pushing prices up." : "Global market relief is the primary driver.";
+                    } else {
+                        summary = attr.fx > 0 ? "CAD weakness is dragging prices higher." : "Stronger CAD is providing price relief.";
+                    }
                     document.getElementById('driver-summary').innerText = summary;
 
                     // 4. 熔断风险与决策结论

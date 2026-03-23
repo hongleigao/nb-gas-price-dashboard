@@ -66,11 +66,13 @@ export default {
       const routineAvg = recentTrades.reduce((sum, row) => sum + row.base_cad_liter, 0) / recentTrades.length;
       const display_total = Math.round((routineAvg - activeBase) * 1.15 * 10) / 10;
       
-      // 归因分析 (保持原有深度)
+      // 归因分析 (专家优化版：解决 0 ¢ 驱动问题)
       const cur_rbob = recentTrades[0].rbob_usd_gal;
       const cur_fx = recentTrades[0].cad_usd_rate;
-      const ref_rbob = latest_eub.rbob_usd_gal || cur_rbob;
-      const ref_fx = latest_eub.cad_usd_rate || cur_fx;
+      
+      // 如果 D1 里的 EUB 记录没有基准值 (初次运行或导入数据)，则自动回溯获取最近市场数据作为基准
+      const ref_rbob = latest_eub.rbob_usd_gal || (recentTrades.length > 1 ? recentTrades[recentTrades.length - 1].rbob_usd_gal : cur_rbob);
+      const ref_fx = latest_eub.cad_usd_rate || (recentTrades.length > 1 ? recentTrades[recentTrades.length - 1].cad_usd_rate : cur_fx);
 
       const comm_impact = ((cur_rbob - ref_rbob) * ref_fx / 3.7854) * 1.15 * 100;
       const fx_impact = (cur_rbob * (cur_fx - ref_fx) / 3.7854) * 1.15 * 100;

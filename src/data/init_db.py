@@ -1,5 +1,10 @@
 import os
 import requests
+from dotenv import load_dotenv
+
+# 自动加载根目录下的 .env 文件
+env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../.env'))
+load_dotenv(env_path)
 
 CF_ACCOUNT_ID = os.environ.get('CLOUDFLARE_ACCOUNT_ID')
 CF_DATABASE_ID = os.environ.get('CLOUDFLARE_DATABASE_ID')
@@ -10,7 +15,8 @@ def init_db():
         print("❌ 错误: 缺少环境变量")
         return
 
-    with open('schema.sql', 'r', encoding='utf-8') as f:
+    schema_path = os.path.join(os.path.dirname(__file__), 'schema.sql')
+    with open(schema_path, 'r', encoding='utf-8') as f:
         sql_content = f.read()
 
     url = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/d1/database/{CF_DATABASE_ID}/query"

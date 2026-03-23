@@ -1,7 +1,16 @@
 import os
+import sys
 import requests
 import pandas as pd
+from dotenv import load_dotenv
+
+# 允许跨目录引用 scripts/settings.py
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../scripts')))
 import settings
+
+# 加载根目录 .env
+env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../.env'))
+load_dotenv(env_path)
 
 CF_ACCOUNT_ID = os.environ.get('CLOUDFLARE_ACCOUNT_ID')
 CF_DATABASE_ID = os.environ.get('CLOUDFLARE_DATABASE_ID')
