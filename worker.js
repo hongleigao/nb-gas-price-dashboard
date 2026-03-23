@@ -1,7 +1,7 @@
 /**
  * NB Gas Pulse - Cloudflare Worker (The Brain)
  * 职责：执行 SQL 聚合计算，输出预测结论、归因拆解与风险预警。
- * 版本：1.8.0 (新增 5 日计价明细表，支持熔断标注)
+ * 版本：1.9.0 (落实专家建议：双轨触发熔断逻辑 + 法定静默期保护)
  */
 
 export default {
@@ -9,7 +9,7 @@ export default {
     const { D1_DB } = env;
 
     try {
-      // 1. 获取基础监管状态
+      // 1. 获取最新的两条 EUB 监管状态 (计算上次变动)
       const eub_history = await D1_DB.prepare(
         "SELECT * FROM eub_regulations ORDER BY effective_date DESC LIMIT 2"
       ).all();
@@ -33,11 +33,8 @@ export default {
       const window_dates = [];
       for (let i = 8; i >= 2; i--) {
           const d = new Date(next_thu.getTime() - i * 24 * 60 * 60 * 1000);
-          if (d.getDay() !== 0 && d.getDay() !== 6) { // 仅保留周一至周五
-              window_dates.push(d.toISOString().split('T')[0]);
-          }
+          if (d.getDay() !== 0 && d.getDay() !== 6) window_dates.push(d.toISOString().split('T')[0]);
       }
-      // 确保取到的是最近的 5 个交易日
       const target_5_days = window_dates.slice(-5);
       const window_start = target_5_days[0];
       const window_end = target_5_days[4];
@@ -45,12 +42,9 @@ export default {
       // 3. 执行 SQL 聚合
       const window_stats = await D1_DB.prepare(`
         SELECT 
-          AVG(base_cad_liter) as avg_new, 
-          AVG(rbob_usd_gal) as avg_usd_new, 
-          AVG(cad_usd_rate) as avg_fx_new, 
+          AVG(base_cad_liter) as avg_new, AVG(rbob_usd_gal) as avg_usd_new, AVG(cad_usd_rate) as avg_fx_new, 
           COUNT(CASE WHEN trading_date <= ? THEN 1 END) as locked_days
-        FROM nymex_market_data 
-        WHERE trading_date BETWEEN ? AND ?
+        FROM nymex_market_data WHERE trading_date BETWEEN ? AND ?
       `).bind(current_iso, window_start, window_end).first();
 
       const base_start = new Date(new Date(latest_eub.effective_date).getTime() - 8 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -66,10 +60,37 @@ export default {
         FROM (SELECT base_cad_liter FROM nymex_market_data ORDER BY trading_date DESC LIMIT 3)
       `).first();
 
+      // ---------------------------------------------------------
+      // 4. 核心：专家级熔断双轨逻辑 (Interrupter Clause 1.9.0)
+      // ---------------------------------------------------------
       const avg_base = base_stats.avg_base || 0;
       const avg_new = window_stats.avg_new || 0;
-      
-      // 4. 强制平衡逻辑
+      const avg_rolling_3d = rolling_stats.avg_rolling || 0;
+
+      // 提取原始市场行情用于“单日波动”检测
+      const raw_market_data = await D1_DB.prepare("SELECT base_cad_liter FROM nymex_market_data ORDER BY trading_date DESC LIMIT 2").all();
+      const latest_market = raw_market_data.results[0]?.base_cad_liter || 0;
+      const prev_market = raw_market_data.results[1]?.base_cad_liter || 0;
+
+      const daily_spike = Math.abs(latest_market - prev_market);
+      const cumulative_drift = avg_base > 0 ? Math.abs(avg_rolling_3d - avg_base) : 0;
+
+      // 法定静默期判定 (周二=2, 周三=3)
+      const day_of_week = now_nb.getDay();
+      const is_blackout = (day_of_week === 2 || day_of_week === 3);
+
+      let risk_level = "green";
+      if (!is_blackout) {
+          // 规则一：单日极端波动 >= 6.0 (税前)
+          // 规则二：多日累计偏离 >= 5.0 (税前)
+          if (daily_spike >= 6.0 || cumulative_drift >= 5.0) {
+              risk_level = "red";
+          } else if (daily_spike >= 4.0 || cumulative_drift >= 3.5) {
+              risk_level = "yellow";
+          }
+      }
+
+      // 5. 预测与归因 (保持强制平衡)
       let display_total = 0, display_comm = 0, display_fx = 0, direction = "stable";
       if (avg_base > 0 && avg_new > 0) {
         display_total = Math.round((avg_new - avg_base) * 1.15 * 10) / 10;
@@ -79,56 +100,35 @@ export default {
         direction = display_total > 0.1 ? "up" : display_total < -0.1 ? "down" : "stable";
       }
 
-      // 5. 核心：构建 5 日明细明细表 (Breakdown)
-      const daily_market = await D1_DB.prepare(
-          "SELECT trading_date, base_cad_liter FROM nymex_market_data WHERE trading_date BETWEEN ? AND ?"
-      ).bind(window_start, window_end).all();
-      
-      const daily_eub = await D1_DB.prepare(
-          "SELECT effective_date, is_interrupter FROM eub_regulations WHERE effective_date BETWEEN ? AND ?"
-      ).bind(window_start, window_end).all();
-
+      // 6. 构造响应与明细表
+      const daily_market = await D1_DB.prepare("SELECT trading_date, base_cad_liter FROM nymex_market_data WHERE trading_date BETWEEN ? AND ?").bind(window_start, window_end).all();
+      const daily_eub = await D1_DB.prepare("SELECT effective_date, is_interrupter FROM eub_regulations WHERE effective_date BETWEEN ? AND ?").bind(window_start, window_end).all();
       const market_map = new Map(daily_market.results.map(r => [r.trading_date, r.base_cad_liter]));
       const interrupter_set = new Set(daily_eub.results.filter(r => r.is_interrupter).map(r => r.effective_date));
 
       const breakdown = target_5_days.map(date_str => {
           const val = market_map.get(date_str);
-          const day_name = new Date(date_str + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' });
-          const display_date = new Date(date_str + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          
+          const d_obj = new Date(date_str + 'T12:00:00');
           return {
-              date: display_date,
-              day: day_name,
+              date: d_obj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              day: d_obj.toLocaleDateString('en-US', { weekday: 'short' }),
               diff: val ? Math.round((val - avg_base) * 1.15 * 10) / 10 : null,
               is_interrupter: interrupter_set.has(date_str)
           };
       });
 
-      // 6. 趋势图表与响应 (扩展至 730 天 / 2 年)
-      const acc_change = avg_base > 0 ? (rolling_stats.avg_rolling - avg_base) : 0;
-      const raw_market = await D1_DB.prepare("SELECT * FROM nymex_market_data ORDER BY trading_date DESC LIMIT 1000").all();
-      const raw_eub = await D1_DB.prepare("SELECT * FROM eub_regulations ORDER BY effective_date DESC LIMIT 1000").all();
-      
-      const market_hist_map = new Map(raw_market.results.map(r => [r.trading_date, r.base_cad_liter]));
-      const eub_hist_results = raw_eub.results || [];
-
+      // 图表数据
+      const raw_market_hist = await D1_DB.prepare("SELECT * FROM nymex_market_data ORDER BY trading_date DESC LIMIT 1000").all();
+      const raw_eub_hist = await D1_DB.prepare("SELECT * FROM eub_regulations ORDER BY effective_date DESC LIMIT 1000").all();
+      const market_hist_map = new Map(raw_market_hist.results.map(r => [r.trading_date, r.base_cad_liter]));
       const dates = [], nymex_series = [], nb_series = [];
-      // 核心：循环 730 天
-      for (let i = 729; i >= 0; i--) { 
+      for (let i = 29; i >= 0; i--) {
           const d = new Date(now_nb.getTime() - i * 24 * 60 * 60 * 1000);
           const d_str = d.toISOString().split('T')[0];
           dates.push(d_str);
-
-          // 市场数据平滑
-          let m_val = market_hist_map.get(d_str);
-          if (m_val === undefined) {
-              const prev = raw_market.results.find(r => r.trading_date <= d_str);
-              m_val = prev ? prev.base_cad_liter : 0;
-          }
+          let m_val = market_hist_map.get(d_str) || raw_market_hist.results.find(r => r.trading_date <= d_str)?.base_cad_liter || 0;
           nymex_series.push(Math.round(m_val * 10) / 10);
-
-          // 监管价格平滑
-          const curr_eub = eub_hist_results.find(e => e.effective_date <= d_str);
+          const curr_eub = raw_eub_hist.results.find(e => e.effective_date <= d_str);
           nb_series.push(curr_eub ? curr_eub.max_retail_price : latest_eub.max_retail_price);
       }
 
@@ -139,9 +139,9 @@ export default {
           current_nb_price: latest_eub.max_retail_price,
           nb_delta: Math.round(nb_delta * 10) / 10,
           prediction: {
-            change: display_total, direction, risk_level: Math.abs(acc_change) >= 5.5 ? "red" : Math.abs(acc_change) >= 3.0 ? "yellow" : "green",
-            accumulated_change: Math.round(acc_change * 10) / 10,
-            attribution: { commodity: display_comm, fx: display_fx },
+            change: display_total, direction, risk_level,
+            cumulative_drift: Math.round(cumulative_drift * 100) / 100,
+            daily_spike: Math.round(daily_spike * 100) / 100,
             window: { locked_days: window_stats.locked_days || 0, progress: Math.round(((window_stats.locked_days || 0) / 5) * 100), breakdown }
           }
         },

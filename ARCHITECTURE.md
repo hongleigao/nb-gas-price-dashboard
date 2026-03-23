@@ -52,8 +52,18 @@ The system is built on the principle of **Logic-Data Decoupling**.
         独立拆解“原油市场波动”与“汇率变动”对最终价格的贡献。
     *   **Calendar Alignment (日历对齐)**: Forward-filling weekend gaps to ensure continuous visualization.
         自动补齐周末及节假日的市场空值，确保前端图表呈现连贯的阶梯状。
-    *   **Risk Scoring (风险评分)**: Monitoring Interrupter Clause thresholds (±6.0¢).
-        实时监控熔断条款阈值（±6.0¢），计算风险等级。
+### 2.4 Interrupter Logic (V1.9.0) / 熔断判定逻辑 (V1.9.0)
+The system employs a **Dual-Trigger** mathematical engine strictly aligned with the *Petroleum Products Pricing Act*:
+系统采用严格对齐《石油产品定价法》的**双轨制**数学引擎：
+
+*   **Rule 1: The Spike (单日波动)**: Any single-day benchmark movement $\ge$ **6.0 ¢/L** (pre-tax).
+    底层基准价单日波动 $\ge$ **6.0 ¢/L**（税前）。
+*   **Rule 2: Cumulative Drift (累计偏离)**: Rolling 3-day average vs. active base $\ge$ **5.0 ¢/L** (pre-tax).
+    最近 3 日滚动均价偏离当前执行基准累计 $\ge$ **5.0 ¢/L**（税前）。
+*   **The Blackout Window (法定静默期)**: Interrupters are legally prohibited on **Tuesday** and **Wednesday**.
+    法律规定**周二**与**周三**禁止触发熔断（数据将直接纳入常规周五调价周期）。
+*   **Pump Impact (终端映射)**: Consumer impact $\approx$ Triggering Deviation $\times$ 1.15 (HST).
+    加油站实际变动 $\approx$ 触发时的税前偏差 $\times$ 1.15 (HST)。
 
 ---
 
