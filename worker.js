@@ -100,7 +100,10 @@ export default {
             direction: direction,
             risk_level: risk_level,
             accumulated_change: Math.round(acc_change * 10) / 10,
-            attribution: { commodity: Math.round(comm_impact * 10) / 10, fx: Math.round(fx_impact * 10) / 10 },
+            attribution: { 
+              commodity: Math.round(comm_impact * 100) / 100, 
+              fx: Math.round(fx_impact * 100) / 100 
+            },
             window: { locked_days: window_stats.locked_days || 0, progress: Math.round(((window_stats.locked_days || 0) / 5) * 100) }
           }
         },

@@ -348,8 +348,8 @@
                     else { confEl.innerText = "Data Confidence: PREDICTIVE"; explEl.innerText = "Initial data in. High volatility expected."; }
 
                     const attr = p.attribution || { commodity: 0, fx: 0 };
-                    document.getElementById('attr-comm').innerText = (attr.commodity > 0 ? "+" : "") + attr.commodity.toFixed(1) + " ¢";
-                    document.getElementById('attr-fx').innerText = (attr.fx > 0 ? "+" : "") + attr.fx.toFixed(1) + " ¢";
+                    document.getElementById('attr-comm').innerText = (attr.commodity > 0 ? "+" : "") + attr.commodity.toFixed(2) + " ¢";
+                    document.getElementById('attr-fx').innerText = (attr.fx > 0 ? "+" : "") + attr.fx.toFixed(2) + " ¢";
                     const barComm = document.getElementById('bar-comm');
                     const barFx = document.getElementById('bar-fx');
                     barComm.style.width = Math.min((Math.abs(attr.commodity) / 5.0) * 100, 100) + "%";
