@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fuel Architect - Cycle Analysis</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-primary-container": "#90a8ff",
+            "secondary-fixed": "#6ffbbe",
+            "on-tertiary-fixed": "#2a1700",
+            "surface-dim": "#d9dadb",
+            "on-secondary-container": "#00714d",
+            "tertiary-fixed-dim": "#ffb95f",
+            "secondary": "#006c49",
+            "inverse-surface": "#2e3132",
+            "tertiary": "#3e2400",
+            "surface-container-low": "#f3f4f5",
+            "outline-variant": "#c5c5d3",
+            "on-primary-fixed": "#00164e",
+            "surface-variant": "#e1e3e4",
+            "surface-bright": "#f8f9fa",
+            "tertiary-container": "#5c3800",
+            "surface-tint": "#4059aa",
+            "surface-container-high": "#e7e8e9",
+            "on-secondary-fixed-variant": "#005236",
+            "error": "#ba1a1a",
+            "on-surface": "#191c1d",
+            "primary-fixed-dim": "#b6c4ff",
+            "on-background": "#191c1d",
+            "outline": "#757682",
+            "on-secondary-fixed": "#002113",
+            "secondary-container": "#6cf8bb",
+            "on-secondary": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "error-container": "#ffdad6",
+            "on-surface-variant": "#444651",
+            "background": "#f8f9fa",
+            "secondary-fixed-dim": "#4edea3",
+            "on-tertiary-container": "#ef9900",
+            "inverse-primary": "#b6c4ff",
+            "tertiary-fixed": "#ffddb8",
+            "on-primary-fixed-variant": "#264191",
+            "surface-container-lowest": "#ffffff",
+            "inverse-on-surface": "#f0f1f2",
+            "on-tertiary-fixed-variant": "#653e00",
+            "surface-container": "#edeeef",
+            "on-error-container": "#93000a",
+            "primary-fixed": "#dce1ff",
+            "on-primary": "#ffffff",
+            "primary-container": "#1e3a8a",
+            "primary": "#00236f",
+            "on-error": "#ffffff",
+            "surface-container-highest": "#e1e3e4",
+            "surface": "#f8f9fa"
+          },
+          fontFamily: {
+            "headline": ["Manrope"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          },
+          borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body antialiased">
+<!-- TopAppBar Section -->
+<header class="bg-slate-50 dark:bg-slate-900 sticky top-0 z-50 flex items-center justify-between w-full px-6 h-16">
+<div class="flex items-center gap-4">
+<button class="text-blue-900 dark:text-blue-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors p-2 rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="text-blue-900 dark:text-blue-400 font-manrope font-bold text-lg">Cycle Analysis</h1>
+</div>
+<div class="flex items-center">
+<span class="text-blue-900 dark:text-blue-400 font-manrope font-extrabold tracking-tight">Fuel Architect</span>
+</div>
+</header>
+<main class="max-w-3xl mx-auto px-4 py-8 space-y-10">
+<!-- Scrollable Formula Section -->
+<section class="space-y-4">
+<h2 class="font-headline font-bold text-on-surface-variant tracking-tight px-2 text-sm uppercase">Active Calculation Formula</h2>
+<div class="relative overflow-hidden rounded-xl bg-surface-container-low p-6">
+<div class="overflow-x-auto no-scrollbar whitespace-nowrap py-4">
+<div class="inline-flex items-center gap-3"><div class="flex flex-col items-center bg-surface-container-lowest px-6 py-2 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] border-l-4 border-primary">
+<span class="text-[10px] text-outline-variant font-bold uppercase tracking-wider">NYMEX RBOB BENCHMARK</span>
+<span class="font-headline font-bold text-primary text-base">NYMEX RBOB / 85.0 ¢</span>
+</div>
+<span class="text-primary font-bold text-xl">×</span>
+<div class="flex flex-col items-center bg-primary text-on-primary px-6 py-2 rounded-xl shadow-[0_4px_12px_rgba(0,35,111,0.15)]">
+<span class="font-headline font-bold text-lg leading-tight">Exchange Rate</span>
+<span class="text-[10px] opacity-80 font-bold uppercase">USD/ZAR</span>
+</div>
+<span class="text-primary font-bold text-xl">/</span>
+<span class="font-headline font-bold text-primary text-lg">158.987</span></div>
+</div>
+<!-- Scroll indicator fade -->
+<div class="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-surface-container-low to-transparent pointer-events-none"></div>
+</div>
+</section>
+<!-- 5-Day Detail Cycle List -->
+<section class="space-y-6">
+<div class="flex items-end justify-between px-2">
+<h2 class="font-headline font-bold text-on-surface-variant tracking-tight text-sm uppercase">5-Day Pricing Cycle</h2>
+<span class="text-[10px] font-bold text-outline uppercase tracking-widest">Ordered: Thu-Wed</span>
+</div>
+<div class="space-y-3">
+<!-- Thursday -->
+<div class="group flex items-center justify-between p-5 bg-surface-container-lowest rounded-xl transition-all duration-300 hover:translate-x-1">
+<div class="flex items-center gap-5">
+<div class="flex flex-col items-center justify-center w-14 h-14 bg-surface-container-low rounded-xl group-hover:bg-primary/5 transition-colors">
+<span class="text-[10px] font-bold text-outline-variant uppercase">Thu</span>
+<span class="font-headline font-extrabold text-primary text-lg leading-tight">14</span>
+</div>
+<div>
+<p class="font-headline font-bold text-on-surface text-base">Day 1</p>
+<p class="text-xs font-mono text-on-surface-variant">NYMEX Close: 2.341</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-headline font-extrabold text-secondary text-lg">-14.2c</p>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Surplus</span>
+</div>
+</div>
+<!-- Friday -->
+<div class="group flex items-center justify-between p-5 bg-surface-container-lowest rounded-xl transition-all duration-300 hover:translate-x-1">
+<div class="flex items-center gap-5">
+<div class="flex flex-col items-center justify-center w-14 h-14 bg-surface-container-low rounded-xl group-hover:bg-primary/5 transition-colors">
+<span class="text-[10px] font-bold text-outline-variant uppercase">Fri</span>
+<span class="font-headline font-extrabold text-primary text-lg leading-tight">15</span>
+</div>
+<div>
+<p class="font-headline font-bold text-on-surface text-base">Day 2</p>
+<p class="text-xs font-mono text-on-surface-variant">NYMEX Close: 2.358</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-headline font-extrabold text-secondary text-lg">-12.8c</p>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Surplus</span>
+</div>
+</div>
+<!-- Monday -->
+<div class="group flex items-center justify-between p-5 bg-surface-container-lowest rounded-xl transition-all duration-300 hover:translate-x-1">
+<div class="flex items-center gap-5">
+<div class="flex flex-col items-center justify-center w-14 h-14 bg-surface-container-low rounded-xl group-hover:bg-primary/5 transition-colors">
+<span class="text-[10px] font-bold text-outline-variant uppercase">Mon</span>
+<span class="font-headline font-extrabold text-primary text-lg leading-tight">18</span>
+</div>
+<div>
+<p class="font-headline font-bold text-on-surface text-base">Day 3</p>
+<p class="text-xs font-mono text-on-surface-variant">NYMEX Close: 2.382</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-headline font-extrabold text-error text-lg">+4.5c</p>
+<span class="bg-error-container text-on-error-container text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Deficit</span>
+</div>
+</div>
+<!-- Tuesday -->
+<div class="group flex items-center justify-between p-5 bg-surface-container-lowest rounded-xl transition-all duration-300 hover:translate-x-1">
+<div class="flex items-center gap-5">
+<div class="flex flex-col items-center justify-center w-14 h-14 bg-surface-container-low rounded-xl group-hover:bg-primary/5 transition-colors">
+<span class="text-[10px] font-bold text-outline-variant uppercase">Tue</span>
+<span class="font-headline font-extrabold text-primary text-lg leading-tight">19</span>
+</div>
+<div>
+<p class="font-headline font-bold text-on-surface text-base">Day 4</p>
+<p class="text-xs font-mono text-on-surface-variant">NYMEX Close: 2.365</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-headline font-extrabold text-secondary text-lg">-8.1c</p>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Surplus</span>
+</div>
+</div>
+<!-- Wednesday -->
+<div class="group flex items-center justify-between p-5 bg-surface-container-lowest rounded-xl transition-all duration-300 hover:translate-x-1 border-l-4 border-primary">
+<div class="flex items-center gap-5">
+<div class="flex flex-col items-center justify-center w-14 h-14 bg-primary rounded-xl transition-colors">
+<span class="text-[10px] font-bold text-on-primary/70 uppercase">Wed</span>
+<span class="font-headline font-extrabold text-on-primary text-lg leading-tight">20</span>
+</div>
+<div>
+<p class="font-headline font-bold text-on-surface text-base">Day 5</p>
+<p class="text-xs font-mono text-on-surface-variant">NYMEX Close: 2.349</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-headline font-extrabold text-secondary text-lg">-11.3c</p>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Surplus</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Contextual Insight (Bento Fragment) -->
+</main>
+<!-- Navigation Suppression: Per instructions, no BottomNavBar rendered -->
+</body></html>
