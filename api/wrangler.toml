@@ -1,0 +1,8 @@
+name = "nb-gas-pulse-api"
+main = "src/index.js"
+compatibility_date = "2024-10-31"
+
+[[d1_databases]]
+binding = "D1_DB"
+database_name = "nb-gas-db"
+database_id = "9088f5bb-cb62-4db3-a1e6-30f9c2a2e123"

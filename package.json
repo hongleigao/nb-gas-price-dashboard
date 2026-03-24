@@ -1,7 +1,0 @@
-{
-  "name": "nb-gas-pulse-api",
-  "type": "module",
-  "devDependencies": {
-    "wrangler": "^3.90.0"
-  }
-}

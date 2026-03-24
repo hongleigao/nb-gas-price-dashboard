@@ -1,0 +1,11 @@
+{
+  "name": "nb-gas-api",
+  "type": "module",
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  }
+}
