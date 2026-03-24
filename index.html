@@ -129,9 +129,13 @@
     </div>
 
     <script>
-        const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8787' : '';
+        // 自动探测 API 地址：本地开发用 8787，生产环境用相对路径
+        const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
+            ? 'http://localhost:8787' 
+            : '';
 
         async function init() {
+            console.log("Using API Base:", API_BASE || "Relative Path");
             // 1. 先加载最新预测 (核心数据)
             await fetchLatest();
             // 2. 异步加载图表 (耗时数据)
@@ -141,9 +145,11 @@
         async function fetchLatest() {
             try {
                 const res = await fetch(`${API_BASE}/api/latest`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
                 renderLatest(data);
             } catch (e) {
+                console.error("Fetch Latest Error:", e);
                 document.getElementById('main-change').innerText = 'ERROR';
             }
         }
@@ -152,7 +158,7 @@
             const p = data.prediction;
             const changeEl = document.getElementById('main-change');
             
-            // 1. 主预测值
+            // 1. 主预测值 (单位修正：数据库返回 112.9 这种分，Worker 计算出 0.1 这种变化)
             const sign = p.change > 0 ? '+' : '';
             changeEl.innerText = `${sign}${p.change.toFixed(1)}`;
             changeEl.innerHTML += `<span class="unit">¢/L</span>`;
@@ -170,12 +176,12 @@
             bar.style.width = `${commRatio}%`;
             bar.style.background = p.spot_attribution.commodity > 0 ? 'var(--danger)' : 'var(--primary)';
 
-            // 3. 窗口列表
+            // 3. 窗口列表 (单位转换：美元转分展示)
             const list = document.getElementById('window-list');
             list.innerHTML = p.window.breakdown.map(d => `
                 <div class="window-day ${d.is_final ? 'is-final' : ''}">
                     <div class="day-name">${d.day}</div>
-                    <div class="day-price">${d.raw_market ? d.raw_market.toFixed(1) : '--'}</div>
+                    <div class="day-price">${d.raw_market ? (d.raw_market * 100).toFixed(1) : '--'}</div>
                     <div class="day-final"></div>
                 </div>
             `).join('');
@@ -184,16 +190,21 @@
         async function fetchHistory() {
             try {
                 const res = await fetch(`${API_BASE}/api/history`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
                 renderChart(data);
                 document.getElementById('chart-loader').style.display = 'none';
             } catch (e) {
+                console.error("Fetch History Error:", e);
                 document.getElementById('chart-loader').innerText = '图表加载失败';
             }
         }
 
         function renderChart(data) {
             const ctx = document.getElementById('historyChart').getContext('2d');
+            // 单位转换：ymex_prices (美元) 转为分
+            const nymex_cents = data.nymex_prices.map(v => v * 100);
+            
             new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -208,8 +219,8 @@
                             pointRadius: 0
                         },
                         {
-                            label: 'NYMEX 市场基准',
-                            data: data.nymex_prices,
+                            label: 'NYMEX 市场基准 (c/L)',
+                            data: nymex_cents,
                             borderColor: 'rgba(255, 255, 255, 0.15)',
                             borderWidth: 1.5,
                             pointRadius: 0
