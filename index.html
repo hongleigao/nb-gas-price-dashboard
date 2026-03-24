@@ -233,6 +233,14 @@
                                 <div class="attr-bar-container"><div id="bar-fx" class="attr-bar-fill"></div></div>
                             </div>
                             <div id="driver-summary" class="driver-text" style="font-size: 11px; line-height: 1.4;">--</div>
+                            
+                            <!-- Debug Section -->
+                            <div id="debug-zone" style="display:none; margin-top: 15px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); font-family: monospace; font-size: 9px; color: var(--text-sub);">
+                                <div>REF SOURCE: <span id="debug-src">--</span></div>
+                                <div>RBOB: <span id="debug-rbob-ref">--</span> -> <span id="debug-rbob-cur">--</span></div>
+                                <div>FX: <span id="debug-fx-ref">--</span> -> <span id="debug-fx-cur">--</span></div>
+                                <div>BASE: <span id="debug-base">--</span></div>
+                            </div>
                         </div>
                     </div>
 
@@ -401,7 +409,22 @@
                     }
                     document.getElementById('driver-summary').innerHTML = summary;
 
-                    // 4. 熔断风险与决策结论
+                    // 5. 调试信息填充
+                    if (m.debug) {
+                        document.getElementById('debug-src').innerText = m.debug.ref_source;
+                        document.getElementById('debug-rbob-ref').innerText = m.debug.ref_rbob;
+                        document.getElementById('debug-rbob-cur').innerText = m.debug.cur_rbob;
+                        document.getElementById('debug-fx-ref').innerText = m.debug.ref_fx;
+                        document.getElementById('debug-fx-cur').innerText = m.debug.cur_fx;
+                        document.getElementById('debug-base').innerText = m.debug.active_base;
+                        
+                        // 如果 URL 包含 ?debug=1 则显示调试区
+                        if (window.location.search.includes('debug=1')) {
+                            document.getElementById('debug-zone').style.display = 'block';
+                        }
+                    }
+
+                    // 6. 熔断风险与决策结论
                     animateValue("pred-val", 0, parseFloat(p.change), 1200, " ¢", true);
                     const decisionEl = document.getElementById('decision-text');
                     const summaryCard = document.querySelector('.summary-card');
