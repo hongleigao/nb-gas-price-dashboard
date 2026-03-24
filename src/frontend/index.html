@@ -182,6 +182,14 @@
                     <div class="label">Projected Variation (Next Fri)</div>
                     <h2 id="pred-val" class="main-value">--</h2>
                     
+                    <!-- Projected Calculation Debug -->
+                    <div id="debug-projected" style="display:none; margin-top: 10px; font-family: monospace; font-size: 9px; color: var(--text-sub); border-left: 2px solid var(--accent-blue); padding-left: 10px;">
+                        <div>FORMULA: <span id="debug-formula">--</span></div>
+                        <div>WINDOW AVG: <span id="debug-win-avg">--</span></div>
+                        <div>ACTIVE BASE: <span id="debug-active-base">--</span></div>
+                        <div>DATES: <span id="debug-dates-used" style="word-break: break-all;">--</span></div>
+                    </div>
+
                     <div class="risk-gauge">
                         <div id="risk-fill" class="risk-marker"></div>
                     </div>
@@ -254,6 +262,13 @@
                             Base last reset on: <span id="reset-date" style="color: var(--accent-blue);">--</span>
                         </div>
                         <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+                            <thead>
+                                <tr style="color: var(--text-sub); font-size: 9px; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <th style="text-align: left; padding-bottom: 8px;">Date</th>
+                                    <th style="text-align: right; padding-bottom: 8px;">Market</th>
+                                    <th style="text-align: right; padding-bottom: 8px;">Dev.</th>
+                                </tr>
+                            </thead>
                             <tbody id="breakdown-body">
                                 <!-- 动态填充 -->
                             </tbody>
@@ -377,15 +392,16 @@
                         win.breakdown.forEach(item => {
                             const row = document.createElement('tr');
                             row.style.borderBottom = '1px solid rgba(255,255,255,0.03)';
+                            
+                            let rawHtml = item.raw_market === null ? '--' : `${item.raw_market.toFixed(1)} ¢`;
                             let diffHtml = item.diff === null ? '<span style="color:var(--text-sub); font-size:11px;">PENDING</span>' : `<span style="color:${item.diff > 0 ? 'var(--accent-red)' : 'var(--accent-green)'}; font-weight:600;">${item.diff > 0 ? '+' : ''}${item.diff.toFixed(1)} ¢</span>`;
-                            row.innerHTML = `<td style="padding:10px 0; color:var(--text-sub);">${item.day} (${item.date}) ${item.is_interrupter ? '<span style="color:var(--accent-red); font-size:9px; margin-left:5px;">●</span>' : ''}</td><td style="padding:10px 0; text-align:right;">${diffHtml}</td>`;
+                            
+                            row.innerHTML = `
+                                <td style="padding:10px 0; color:var(--text-sub);">${item.day} (${item.date})</td>
+                                <td style="padding:10px 0; text-align:right; font-family: monospace; color: var(--accent-blue);">${rawHtml}</td>
+                                <td style="padding:10px 0; text-align:right;">${diffHtml}</td>
+                            `;
                             breakdownBody.appendChild(row);
-                            if (item.is_interrupter) {
-                                hasInterrupter = true;
-                                const divider = document.createElement('tr');
-                                divider.innerHTML = `<td colspan="2" style="padding:8px 0; border-bottom: 1px dashed var(--accent-red);"><div style="color:var(--accent-red); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; text-align:center;">Emergency Base Reset Applied</div></td>`;
-                                breakdownBody.appendChild(divider);
-                            }
                         });
                     }
                     if (hasInterrupter) baseResetTag.style.display = 'block';
@@ -403,7 +419,6 @@
                     if (Math.abs(attr.commodity) < 0.01 && Math.abs(attr.fx) < 0.01) {
                         summary = "Market conditions remain synchronized with the current baseline.";
                     } else {
-                        const mainDriver = Math.abs(attr.commodity) > Math.abs(attr.fx) ? "Global Market" : "Currency (CAD)";
                         summary = `Current spot deviation is <b>${(attr.commodity + attr.fx).toFixed(2)}¢</b> (pre-tax). `;
                         summary += `Note: Projection differs due to 5-day window smoothing.`;
                     }
@@ -411,16 +426,24 @@
 
                     // 5. 调试信息填充
                     if (m.debug) {
-                        document.getElementById('debug-src').innerText = m.debug.ref_source;
-                        document.getElementById('debug-rbob-ref').innerText = m.debug.ref_rbob;
-                        document.getElementById('debug-rbob-cur').innerText = m.debug.cur_rbob;
-                        document.getElementById('debug-fx-ref').innerText = m.debug.ref_fx;
-                        document.getElementById('debug-fx-cur').innerText = m.debug.cur_fx;
-                        document.getElementById('debug-base').innerText = m.debug.active_base;
+                        // Instant Drive Debug
+                        document.getElementById('debug-src').innerText = m.debug.instant_drive.ref_source;
+                        document.getElementById('debug-rbob-ref').innerText = m.debug.instant_drive.ref_rbob;
+                        document.getElementById('debug-rbob-cur').innerText = m.debug.instant_drive.cur_rbob;
+                        document.getElementById('debug-fx-ref').innerText = m.debug.instant_drive.ref_fx;
+                        document.getElementById('debug-fx-cur').innerText = m.debug.instant_drive.cur_fx;
+                        document.getElementById('debug-base').innerText = m.debug.instant_drive.base_cad;
                         
+                        // Projected Debug
+                        document.getElementById('debug-formula').innerText = m.debug.projected_vars.formula;
+                        document.getElementById('debug-win-avg').innerText = m.debug.projected_vars.window_avg;
+                        document.getElementById('debug-active-base').innerText = m.debug.projected_vars.base_cad;
+                        document.getElementById('debug-dates-used').innerText = m.debug.projected_vars.dates_used.join(', ');
+
                         // 如果 URL 包含 ?debug=1 则显示调试区
                         if (window.location.search.includes('debug=1')) {
                             document.getElementById('debug-zone').style.display = 'block';
+                            document.getElementById('debug-projected').style.display = 'block';
                         }
                     }
 
