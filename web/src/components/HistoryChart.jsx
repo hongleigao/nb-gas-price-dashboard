@@ -36,7 +36,7 @@ const HistoryChart = () => {
     let lastEub = null;
     let lastMarket = null;
     
-    // --- 新增：单位转换常数 (1 US Gallon = 3.7854 Litres) ---
+    // --- 单位转换常数 (1 US Gallon = 3.7854 Litres) ---
     const GAL_TO_LITER = 3.7854;
 
     const mergedData = allDates.map(date => {
@@ -66,7 +66,6 @@ const HistoryChart = () => {
                 if (p.seriesName === 'EUB Max Price') {
                     html += `<div>${p.marker} ${p.seriesName}: <b>${p.value !== undefined ? p.value + ' ¢/L' : '-'}</b></div>`;
                 } else {
-                    // 修正：现在统一为 ¢/L 单位
                     html += `<div>${p.marker} ${p.seriesName}: <b>${p.value !== undefined ? p.value.toFixed(2) + ' ¢/L' : '-'}</b></div>`;
                 }
             });
@@ -93,17 +92,16 @@ const HistoryChart = () => {
         {
           type: 'value',
           name: '¢/L (EUB)',
-          axisLine: { lineStyle: { color: '#00236f' } },
+          axisLine: { lineStyle: { color: '#00236f' } }, // 保持官方权威的深蓝
           splitLine: { lineStyle: { color: '#e7e8e9' } },
           scale: true
         },
         {
           type: 'value',
           name: '¢/L (Market)',
-          axisLine: { lineStyle: { color: '#4059aa' } },
+          axisLine: { lineStyle: { color: '#059669' } }, // 换成醒目的翠绿色 (Emerald Green)
           splitLine: { show: false },
           scale: true,
-          // 移除上一个版本的美元符号，恢复为纯数值匹配 ¢/L
           axisLabel: { formatter: '{value}' }
         }
       ],
@@ -111,22 +109,23 @@ const HistoryChart = () => {
         {
           name: 'EUB Max Price',
           type: 'line',
-          step: 'end', // 实施 7.4 节：强制阶梯图
+          step: 'end',
           data: eubPrices,
-          itemStyle: { color: '#00236f' },
+          itemStyle: { color: '#00236f' }, // 深蓝色
           lineStyle: { width: 3 }
         },
         {
           name: 'Market RBOB Cost',
           type: 'line',
-          yAxisIndex: 1, // 绑定到右侧的辅助轴
+          yAxisIndex: 1,
           smooth: true,
           data: marketPrices,
-          itemStyle: { color: '#4059aa' },
+          itemStyle: { color: '#059669' }, // 翠绿色
           areaStyle: {
+            // 渐变色同步优化为绿色系
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(64, 89, 170, 0.2)' },
-              { offset: 1, color: 'rgba(64, 89, 170, 0)' }
+              { offset: 0, color: 'rgba(5, 150, 105, 0.2)' },
+              { offset: 1, color: 'rgba(5, 150, 105, 0)' }
             ])
           }
         }
@@ -145,7 +144,6 @@ const HistoryChart = () => {
 
   return (
     <div className="space-y-6 pb-8">
-      {/* 按照 v1.9 要求，去掉了此处的后退箭头，保持 Trends 独立的一级路由身份 */}
       <section className="mb-8">
         <h2 className="font-headline font-bold text-3xl text-primary tracking-tight">Refined Trends</h2>
         <div className="flex items-center gap-2 mt-2">

@@ -48,7 +48,7 @@ def seed_market_history(days=730):
         print("Warning: One of the tickers returned no data.")
         return pd.DataFrame()
 
-    # Flatten MultiIndex if necessary
+    # Flatten MultiIndex if necessary (yfinance latest versions return MultiIndex)
     if isinstance(rbob_data.columns, pd.MultiIndex):
         rbob_data.columns = rbob_data.columns.get_level_values(0)
     if isinstance(cad_data.columns, pd.MultiIndex):
@@ -57,7 +57,12 @@ def seed_market_history(days=730):
     rbob = rbob_data[['Close']].rename(columns={'Close': 'rbob_usd'})
     cad = cad_data[['Close']].rename(columns={'Close': 'cad_rate'})
     
-    market_df = rbob.join(cad, how='inner').dropna()
+    # 核心修复点 1：使用 Left Join 保留所有期货交易日
+    # 核心修复点 2：使用 ffill() 执行前向填充机制，解决由于汇率市场休市导致的整行数据被 Drop 的 Bug
+    market_df = rbob.join(cad, how='left')
+    market_df['cad_rate'] = market_df['cad_rate'].ffill() 
+    market_df = market_df.dropna() # 仅剔除最开头无法向前寻找汇率的脏数据
+    
     market_df.index = market_df.index.strftime('%Y-%m-%d')
     
     print(f"Fetched {len(market_df)} market data points.")
@@ -99,14 +104,16 @@ def main():
             is_interrupter = 1 if row['Date'].weekday() != 4 else 0
             variance = (price - prev_price) if (prev_price and is_interrupter) else 0
             
-            sql = f"INSERT INTO eub_prices (effective_date, published_date, max_price, is_interrupter, interrupter_variance) VALUES ('{date_str}', '{date_str}', {price}, {is_interrupter}, {variance}) ON CONFLICT(effective_date) DO UPDATE SET max_price=excluded.max_price;"
+            # 保证幂等性：冲突时覆盖所有值
+            sql = f"INSERT INTO eub_prices (effective_date, published_date, max_price, is_interrupter, interrupter_variance) VALUES ('{date_str}', '{date_str}', {price}, {is_interrupter}, {variance}) ON CONFLICT(effective_date) DO UPDATE SET max_price=excluded.max_price, is_interrupter=excluded.is_interrupter, interrupter_variance=excluded.interrupter_variance;"
             eub_sqls.append(sql)
             prev_price = price
             
         # 3. Prepare Market SQLs
         market_sqls = []
         for date_str, row in market_df.iterrows():
-            sql = f"INSERT INTO market_data (date, rbob_usd_close, cad_usd_rate) VALUES ('{date_str}', {row['rbob_usd']}, {row['cad_rate']}) ON CONFLICT(date) DO UPDATE SET rbob_usd_close=excluded.rbob_usd_close;"
+            # 保证幂等性：冲突时不仅更新 rbob_usd_close，也更新 cad_usd_rate
+            sql = f"INSERT INTO market_data (date, rbob_usd_close, cad_usd_rate) VALUES ('{date_str}', {row['rbob_usd']}, {row['cad_rate']}) ON CONFLICT(date) DO UPDATE SET rbob_usd_close=excluded.rbob_usd_close, cad_usd_rate=excluded.cad_usd_rate;"
             market_sqls.append(sql)
             
         # 4. Execute in chunks to avoid Cloudflare size limits
