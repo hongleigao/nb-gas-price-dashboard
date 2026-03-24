@@ -10,7 +10,11 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8787/api/v1/cycle/current')
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://127.0.0.1:8787'
+      : 'https://nb-gas-pulse-api.honglei-gao.workers.dev'; // 默认 Cloudflare Worker 地址
+
+    fetch(`${API_BASE}/api/v1/cycle/current`)
       .then(res => res.json())
       .then(setData)
       .catch(console.error)

@@ -6,7 +6,11 @@ const HistoryChart = () => {
   const [data, setData] = useState(null);
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8787/api/v1/history?days=90')
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://127.0.0.1:8787'
+      : 'https://nb-gas-pulse-api.honglei-gao.workers.dev';
+
+    fetch(`${API_BASE}/api/v1/history?days=90`)
       .then(res => res.json())
       .then(setData)
       .catch(console.error);
