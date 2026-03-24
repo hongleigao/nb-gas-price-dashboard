@@ -1,7 +1,7 @@
 /**
  * NB Gas Pulse - Cloudflare Worker (The Brain)
  * 职责：整合专家建议的 3日滚动均值逻辑 + 法定静默期判定
- * 版本：2.2.1 (Handle Legacy NULL is_final)
+ * 版本：2.2.2 (Debug Mode Enabled)
  */
 
 export default {
@@ -27,7 +27,7 @@ export default {
       const current_iso = now_nb.toISOString().split('T')[0];
       const day_of_week = now_nb.getDay(); 
 
-      // 2. 获取最近 10 个交易日的市场数据 (带出是否收盘标记)
+      // 2. 获取最近 10 个交易日的市场数据
       const market_data = await D1_DB.prepare(`
         SELECT trading_date, base_cad_liter, rbob_usd_gal, cad_usd_rate, is_final
         FROM nymex_market_data 
@@ -42,7 +42,7 @@ export default {
       // 3. 获取最近一次收盘记录 (兼容处理：NULL 视为已收盘)
       const latestFinal = recentTrades.find(r => r.is_final === 1 || r.is_final === null) || recentTrades[0];
 
-      // 4. 熔断机制判定 (仅基于已收盘数据)
+      // 4. 熔断机制判定
       let interrupter_alert = false;
       let interrupter_type = "none";
       let interrupter_reason = "市场平稳";
@@ -51,7 +51,6 @@ export default {
       const is_blackout = (day_of_week === 2 || day_of_week === 3);
       
       if (!is_blackout) {
-        // 兼容处理：treat null as 1 (Final)
         const finalTrades = recentTrades.filter(r => r.is_final === 1 || r.is_final === null).slice(0, 3);
         if (finalTrades.length >= 3) {
             const rollingAvg3Days = finalTrades.reduce((sum, row) => sum + row.base_cad_liter, 0) / 3;
@@ -78,7 +77,7 @@ export default {
       const target_5_days = window_dates.slice(-5);
       const market_map = new Map(recentTrades.map(r => [r.trading_date, r]));
 
-      // 6. 精准窗口预测 (兼容处理：NULL 视为已收盘)
+      // 6. 精准窗口预测
       const windowFinalTrades = recentTrades.filter(r => target_5_days.includes(r.trading_date) && (r.is_final === 1 || r.is_final === null));
       const routineAvg = windowFinalTrades.length > 0 
           ? windowFinalTrades.reduce((sum, row) => sum + row.base_cad_liter, 0) / windowFinalTrades.length 
@@ -88,8 +87,17 @@ export default {
       // 归因分析 (针对最新的已收盘价)
       const cur_rbob = latestFinal.rbob_usd_gal;
       const cur_fx = latestFinal.cad_usd_rate;
-      const ref_rbob = latest_eub.rbob_usd_gal || (recentTrades.length > 1 ? recentTrades[recentTrades.length - 1].rbob_usd_gal : cur_rbob);
-      const ref_fx = latest_eub.cad_usd_rate || (recentTrades.length > 1 ? recentTrades[recentTrades.length - 1].cad_usd_rate : cur_fx);
+      
+      // 调试用：确定基准来源
+      let ref_source = "EUB_RECORD";
+      let ref_rbob = latest_eub.rbob_usd_gal;
+      let ref_fx = latest_eub.cad_usd_rate;
+
+      if (!ref_rbob || !ref_fx) {
+          ref_source = "WINDOW_BACKTRACE";
+          ref_rbob = recentTrades.length > 1 ? recentTrades[recentTrades.length - 1].rbob_usd_gal : cur_rbob;
+          ref_fx = recentTrades.length > 1 ? recentTrades[recentTrades.length - 1].cad_usd_rate : cur_fx;
+      }
 
       const comm_impact = ((cur_rbob - ref_rbob) * ref_fx / 3.7854) * 1.15 * 100;
       const fx_impact = (cur_rbob * (cur_fx - ref_fx) / 3.7854) * 1.15 * 100;
@@ -112,7 +120,7 @@ export default {
         ORDER BY effective_date DESC LIMIT 1
       `).first();
 
-      // 8. 历史趋势数据 (保持图表功能)
+      // 8. 历史趋势数据
       const start_date_history = new Date(now_nb.getTime() - 730 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const history_market = await D1_DB.prepare("SELECT trading_date, base_cad_liter FROM nymex_market_data WHERE trading_date >= ? ORDER BY trading_date ASC").bind(start_date_history).all();
       const history_eub = await D1_DB.prepare("SELECT effective_date, max_retail_price FROM eub_regulations WHERE effective_date >= ? ORDER BY effective_date ASC").bind(start_date_history).all();
@@ -136,6 +144,14 @@ export default {
           last_interrupter_date: last_interrupter ? last_interrupter.effective_date : null,
           current_nb_price: latest_eub.max_retail_price,
           nb_delta: Math.round(nb_delta * 10) / 10,
+          debug: {
+              ref_source,
+              ref_rbob: parseFloat(ref_rbob.toFixed(4)),
+              cur_rbob: parseFloat(cur_rbob.toFixed(4)),
+              ref_fx: parseFloat(ref_fx.toFixed(4)),
+              cur_fx: parseFloat(cur_fx.toFixed(4)),
+              active_base: parseFloat(activeBase.toFixed(2))
+          },
           prediction: {
             change: display_total,
             direction: display_total > 0.1 ? "up" : display_total < -0.1 ? "down" : "stable",
