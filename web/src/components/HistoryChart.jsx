@@ -36,12 +36,16 @@ const HistoryChart = () => {
     let lastEub = null;
     let lastMarket = null;
     
+    // --- 新增：单位转换常数 (1 US Gallon = 3.7854 Litres) ---
+    const GAL_TO_LITER = 3.7854;
+
     const mergedData = allDates.map(date => {
        const eubMatch = eubData.find(d => d.effective_date === date);
        if (eubMatch) lastEub = eubMatch.max_price;
        
        const marketMatch = marketData.find(d => d.date === date);
-       if (marketMatch) lastMarket = marketMatch.rbob_cad_base;
+       // 转换：将 加元/加仑 转为 加分/升
+       if (marketMatch) lastMarket = (marketMatch.rbob_cad_base / GAL_TO_LITER) * 100;
        
        return { date, eubPrice: lastEub, marketPrice: lastMarket };
     });
@@ -62,8 +66,8 @@ const HistoryChart = () => {
                 if (p.seriesName === 'EUB Max Price') {
                     html += `<div>${p.marker} ${p.seriesName}: <b>${p.value !== undefined ? p.value + ' ¢/L' : '-'}</b></div>`;
                 } else {
-                    // 为市场价补充 美元/加仑 的明示格式化
-                    html += `<div>${p.marker} ${p.seriesName}: <b>${p.value !== undefined ? '$' + p.value.toFixed(3) + ' CAD/gal' : '-'}</b></div>`;
+                    // 修正：现在统一为 ¢/L 单位
+                    html += `<div>${p.marker} ${p.seriesName}: <b>${p.value !== undefined ? p.value.toFixed(2) + ' ¢/L' : '-'}</b></div>`;
                 }
             });
             return html;
@@ -95,12 +99,12 @@ const HistoryChart = () => {
         },
         {
           type: 'value',
-          name: 'Market (CAD/gal)',
+          name: '¢/L (Market)',
           axisLine: { lineStyle: { color: '#4059aa' } },
           splitLine: { show: false },
           scale: true,
-          // 为右侧坐标轴补充金钱符号
-          axisLabel: { formatter: '${value} CAD' }
+          // 移除上一个版本的美元符号，恢复为纯数值匹配 ¢/L
+          axisLabel: { formatter: '{value}' }
         }
       ],
       series: [

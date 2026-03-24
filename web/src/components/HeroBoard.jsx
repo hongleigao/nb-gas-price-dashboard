@@ -5,17 +5,25 @@ const HeroBoard = ({ data, onExplore }) => {
   const payload = data?.data || {};
   const { current_eub, benchmark_price, market_cycle } = payload;
   
+  // --- 新增：将 加元/加仑 转换为 加分/升 (1 US Gallon = 3.7854 Litres) ---
+  const GAL_TO_LITER = 3.7854;
+  const benchmark_price_cl = benchmark_price ? (benchmark_price / GAL_TO_LITER) * 100 : 0;
+  
   // 1. 前端自行计算市区预估价 (限价 - 5.5)
   const pump_estimated = current_eub ? (current_eub.max_price - 5.5).toFixed(1) : '...';
   
-  // 2. 修正：严格执行 5日均值减去熔断 的算法
+  // 2. 修正：严格执行 5日均值减去熔断 的算法，并统一使用 ¢/L 单位
   const validDays = market_cycle || [];
   const n = validDays.length;
   let avgVariance = 0;
   let currentCumulative = 0;
 
-  if (n > 0 && benchmark_price) {
-    const sum = validDays.reduce((acc, d) => acc + (d.absolute_price - benchmark_price), 0);
+  if (n > 0 && benchmark_price_cl) {
+    const sum = validDays.reduce((acc, d) => {
+        // 转换每一天的绝对价为 加分/升
+        const absolute_price_cl = (d.absolute_price / GAL_TO_LITER) * 100;
+        return acc + (absolute_price_cl - benchmark_price_cl);
+    }, 0);
     avgVariance = sum / n;
     currentCumulative = Math.abs(avgVariance);
   }

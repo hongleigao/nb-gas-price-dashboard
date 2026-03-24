@@ -4,11 +4,17 @@ const CycleDetails = ({ onBack, data }) => {
   const payload = data?.data || {};
   const { current_eub, market_cycle, benchmark_price } = payload;
 
+  // --- 新增：将 加元/加仑 转换为 加分/升 ---
+  const GAL_TO_LITER = 3.7854;
+  const benchmark_price_cl = benchmark_price ? (benchmark_price / GAL_TO_LITER) * 100 : 0;
+
   // 构建公式推演字符串
   const validDays = market_cycle || [];
   const n = validDays.length;
   const variances = validDays.map(d => {
-      const v = d.absolute_price - benchmark_price;
+      // 在计算每日偏离值前先转换单位
+      const absolute_price_cl = (d.absolute_price / GAL_TO_LITER) * 100;
+      const v = absolute_price_cl - benchmark_price_cl;
       return v > 0 ? `+${v.toFixed(2)}` : v.toFixed(2);
   });
   const sumStr = variances.join(' ');
@@ -18,7 +24,10 @@ const CycleDetails = ({ onBack, data }) => {
 
   let avgVariance = 0;
   if (n > 0) {
-      const sum = validDays.reduce((acc, d) => acc + (d.absolute_price - benchmark_price), 0);
+      const sum = validDays.reduce((acc, d) => {
+          const absolute_price_cl = (d.absolute_price / GAL_TO_LITER) * 100;
+          return acc + (absolute_price_cl - benchmark_price_cl);
+      }, 0);
       avgVariance = sum / n;
   }
   const finalPred = avgVariance - intVar;
@@ -34,17 +43,16 @@ const CycleDetails = ({ onBack, data }) => {
       </div>
 
       <section className="space-y-4">
-        <h2 className="font-headline font-bold text-on-surface-variant tracking-tight text-sm uppercase px-2">Active Calculation Formula</h2>
-        
-        {/* 按照用户需求：完全展示动态数学方程式的区块 */}
-        <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/20 shadow-sm">
-            <h3 className="text-xs font-bold text-outline-variant uppercase tracking-wider mb-4">Calculation Breakdown</h3>
-            <div className="font-mono text-sm md:text-base text-on-surface bg-surface-container-low p-4 rounded-lg overflow-x-auto whitespace-nowrap">
-                ( {sumStr || '0.00'} ) / {n || 1} - ({intVarStr}) = <span className="font-bold text-primary">{finalStr} ¢</span>
+            <div className="inline-flex items-center gap-3">
+              {/* 仅保留了唯一的法定基准，删除了伪造的 Logistics/Market Add */}
+              <div className="flex flex-col items-center bg-surface-container-lowest px-6 py-3 rounded-xl border-l-4 border-primary shadow-sm min-w-[200px]">
+                <span className="text-xs text-outline-variant font-bold uppercase tracking-wider mb-1">BENCHMARK (PREV CYCLE)</span>
+                <span className="font-headline font-extrabold text-primary text-xl">NYMEX RBOB</span>
+                {benchmark_price_cl > 0 && <span className="text-sm font-bold text-secondary mt-1">{benchmark_price_cl.toFixed(2)} ¢/L</span>}
+              </div>
             </div>
-            <p className="text-[11px] text-on-surface-variant mt-3">
-                * 5日偏离均值 (实际获得收盘数据的 {n} 天) - 周期内已生效的熔断偏离值
-            </p>
+          </div>
+          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-surface-container-low to-transparent pointer-events-none"></div>
         </div>
       </section>
 
@@ -55,11 +63,12 @@ const CycleDetails = ({ onBack, data }) => {
         </div>
         
         <div className="space-y-3">
-          {market_cycle?.map((day, idx) => {
-            // 前端基于架构契约计算偏离值
-            const variance = day.absolute_price - benchmark_price;
+          {validDays.map((day, idx) => {
+            // 前端基于架构契约计算偏离值，并完成单位转换
+            const absolute_price_cl = (day.absolute_price / GAL_TO_LITER) * 100;
+            const variance = absolute_price_cl - benchmark_price_cl;
             const isSurplus = variance < 0;
-            const isLast = idx === market_cycle.length - 1;
+            const isLast = idx === validDays.length - 1;
             
             return (
               <div key={day.date} className="group flex items-center justify-between p-5 bg-surface-container-lowest rounded-xl hover:translate-x-1 transition-all">
@@ -74,7 +83,7 @@ const CycleDetails = ({ onBack, data }) => {
                   </div>
                   <div>
                     <p className="font-headline font-bold text-on-surface text-base">Day {idx + 1}</p>
-                    <p className="text-xs font-mono text-on-surface-variant">NYMEX Close: {day.absolute_price.toFixed(3)}</p>
+                    <p className="text-xs font-mono text-on-surface-variant">NYMEX Close: {absolute_price_cl.toFixed(2)} ¢/L</p>
                   </div>
                 </div>
                 <div className="text-right">
