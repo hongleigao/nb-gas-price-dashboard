@@ -129,13 +129,15 @@
     </div>
 
     <script>
+        const APP_VERSION = "6.0.2";
         // V6.0 生产环境指向：显式指定 Cloudflare Worker 地址
         const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
             ? 'http://localhost:8787' 
             : 'https://nb-gas-pulse-api.honglei-gao.workers.dev';
 
         async function init() {
-            console.log("Using API Base:", API_BASE || "Relative Path");
+            console.log(`[NB Gas Pulse] Version: ${APP_VERSION}`);
+            console.log(`[NB Gas Pulse] API Target: ${API_BASE || "Relative"}`);
             // 1. 先加载最新预测 (核心数据)
             await fetchLatest();
             // 2. 异步加载图表 (耗时数据)
