@@ -43,16 +43,17 @@ const CycleDetails = ({ onBack, data }) => {
       </div>
 
       <section className="space-y-4">
-            <div className="inline-flex items-center gap-3">
-              {/* 仅保留了唯一的法定基准，删除了伪造的 Logistics/Market Add */}
-              <div className="flex flex-col items-center bg-surface-container-lowest px-6 py-3 rounded-xl border-l-4 border-primary shadow-sm min-w-[200px]">
-                <span className="text-xs text-outline-variant font-bold uppercase tracking-wider mb-1">BENCHMARK (PREV CYCLE)</span>
-                <span className="font-headline font-extrabold text-primary text-xl">NYMEX RBOB</span>
-                {benchmark_price_cl > 0 && <span className="text-sm font-bold text-secondary mt-1">{benchmark_price_cl.toFixed(2)} ¢/L</span>}
-              </div>
+        <h2 className="font-headline font-bold text-on-surface-variant tracking-tight text-sm uppercase px-2">Active Calculation Formula</h2>
+        
+        {/* 完全展示动态数学方程式的区块 */}
+        <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/20 shadow-sm">
+            <h3 className="text-xs font-bold text-outline-variant uppercase tracking-wider mb-4">Calculation Breakdown</h3>
+            <div className="font-mono text-sm md:text-base text-on-surface bg-surface-container-low p-4 rounded-lg overflow-x-auto whitespace-nowrap">
+                ( {sumStr || '0.00'} ) / {n || 1} - ({intVarStr}) = <span className="font-bold text-primary">{finalStr} ¢</span>
             </div>
-          </div>
-          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-surface-container-low to-transparent pointer-events-none"></div>
+            <p className="text-[11px] text-on-surface-variant mt-3">
+                * 5日偏离均值 (实际获得收盘数据的 {n} 天) - 周期内已生效的熔断偏离值
+            </p>
         </div>
       </section>
 
