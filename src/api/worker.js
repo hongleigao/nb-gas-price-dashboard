@@ -48,11 +48,13 @@ async function handleLatest(db, headers) {
 
   if (!stats) throw new Error("Database views not initialized or no data found");
 
-  // 计算预测涨跌额 (窗口均值 - 当前基准)
-  // 注意：active_base 是 EUB 调价时的基准锚点
-  const display_total = Math.round((stats.window_avg - stats.current_eub_price/1.15 + 45.42 - 45.42) * 1.15 * 10) / 10; 
-  // 简化版逻辑：这里我们可以直接在 SQL 里算，或者保持一点点 JS 的灵活性
-  const change = Math.round((stats.window_avg - (stats.current_eub_price / 1.15 - 45.42)) * 1.15 * 10) / 10;
+  // V6.0 核心修正：stats.window_avg 是美元 ($1.12)，需要乘以 100 转换为分 (112.9c)
+  const windowAvgCents = stats.window_avg * 100;
+  
+  // 计算预测涨跌 (分/升)
+  // 公式：(窗口均值 - (当前官方零售价 / 1.15 - 45.42)) * 1.15
+  const currentMarketBase = (stats.current_eub_price / 1.15) - 45.42;
+  const change = Math.round((windowAvgCents - currentMarketBase) * 1.15 * 10) / 10;
 
   return Response.json({
     metadata: {
