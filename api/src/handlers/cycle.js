@@ -6,7 +6,9 @@ function getMonctonCycleDates() {
         year: 'numeric', month: '2-digit', day: '2-digit'
     });
     const todayStr = formatter.format(new Date());
-    const [y, m, d] = todayStr.split('-');
+    
+    // 修正：将 split 出来的字符串数组强制转换为 Number 类型
+    const [y, m, d] = todayStr.split('-').map(Number);
     
     // 使用 UTC 构建 Date 对象，避免服务器本地时区干扰推算
     const todayDate = new Date(Date.UTC(y, m - 1, d)); 

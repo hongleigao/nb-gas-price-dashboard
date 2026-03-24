@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fuel Architect - Market Dashboard</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-primary-container": "#90a8ff",
+              "secondary-fixed": "#6ffbbe",
+              "on-tertiary-fixed": "#2a1700",
+              "surface-dim": "#d9dadb",
+              "on-secondary-container": "#00714d",
+              "tertiary-fixed-dim": "#ffb95f",
+              "secondary": "#006c49",
+              "inverse-surface": "#2e3132",
+              "tertiary": "#3e2400",
+              "surface-container-low": "#f3f4f5",
+              "outline-variant": "#c5c5d3",
+              "on-primary-fixed": "#00164e",
+              "surface-variant": "#e1e3e4",
+              "surface-bright": "#f8f9fa",
+              "tertiary-container": "#5c3800",
+              "surface-tint": "#4059aa",
+              "surface-container-high": "#e7e8e9",
+              "on-secondary-fixed-variant": "#005236",
+              "error": "#ba1a1a",
+              "on-surface": "#191c1d",
+              "primary-fixed-dim": "#b6c4ff",
+              "on-background": "#191c1d",
+              "outline": "#757682",
+              "on-secondary-fixed": "#002113",
+              "secondary-container": "#6cf8bb",
+              "on-secondary": "#ffffff",
+              "on-tertiary": "#ffffff",
+              "error-container": "#ffdad6",
+              "on-surface-variant": "#444651",
+              "background": "#f8f9fa",
+              "secondary-fixed-dim": "#4edea3",
+              "on-tertiary-container": "#ef9900",
+              "inverse-primary": "#b6c4ff",
+              "tertiary-fixed": "#ffddb8",
+              "on-primary-fixed-variant": "#264191",
+              "surface-container-lowest": "#ffffff",
+              "inverse-on-surface": "#f0f1f2",
+              "on-tertiary-fixed-variant": "#653e00",
+              "surface-container": "#edeeef",
+              "on-error-container": "#93000a",
+              "primary-fixed": "#dce1ff",
+              "on-primary": "#ffffff",
+              "primary-container": "#1e3a8a",
+              "primary": "#00236f",
+              "on-error": "#ffffff",
+              "surface-container-highest": "#e1e3e4",
+              "surface": "#f8f9fa"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        -webkit-font-smoothing: antialiased;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface font-body text-on-surface selection:bg-primary-fixed">
+<!-- TopAppBar -->
+<header class="bg-slate-50 flex items-center justify-between w-full px-6 h-16 fixed top-0 z-50">
+<div class="flex items-center gap-3">
+<span class="text-blue-900 font-manrope font-extrabold tracking-tight text-xl">Fuel Architect</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-slate-500 hover:bg-slate-200/50 p-2 rounded-full transition-colors active:scale-95 duration-150">notifications</button>
+<button class="material-symbols-outlined text-slate-500 hover:bg-slate-200/50 p-2 rounded-full transition-colors active:scale-95 duration-150">account_circle</button>
+</div>
+</header>
+<main class="pt-20 pb-28 px-6 max-w-4xl mx-auto space-y-6">
+<!-- Hero Section: Next Week Prediction -->
+<section class="relative overflow-hidden rounded-3xl bg-primary-container p-8 shadow-sm">
+<!-- Decorative Grain Texture / Abstract Shape -->
+<div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 24px 24px;"></div>
+<div class="relative z-10">
+<div class="flex justify-between items-start mb-6">
+<div>
+<span class="font-label text-[11px] font-semibold uppercase tracking-widest text-on-primary-container mb-2 block">Forecast: Next Cycle</span>
+<h1 class="font-headline font-extrabold text-4xl text-white tracking-tight">-5.45c</h1>
+</div>
+<div class="bg-secondary/20 backdrop-blur-md rounded-full px-4 py-1.5 flex items-center gap-2 border border-secondary/30">
+<span class="material-symbols-outlined text-secondary-fixed text-sm" style="font-variation-settings: 'FILL' 1;">trending_down</span>
+<span class="font-label font-bold text-secondary-fixed text-xs uppercase tracking-wider">FALLING</span>
+</div>
+</div>
+<div class="flex items-center gap-4 mt-8">
+<div class="h-1 flex-1 bg-white/10 rounded-full overflow-hidden">
+<div class="h-full bg-secondary-fixed w-3/4 rounded-full"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Bento Grid: Secondary Metrics -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Price Card -->
+<div class="bg-surface-container-lowest p-6 rounded-3xl flex flex-col justify-between transition-transform duration-200">
+<div>
+<span class="font-label text-xs font-semibold uppercase tracking-wider text-on-surface-variant block mb-4">Estimated Pump Price</span>
+<div class="flex items-baseline gap-2">
+<span class="font-headline font-bold text-5xl text-primary">160.0</span>
+<span class="font-headline font-bold text-xl text-on-surface-variant">c/L</span>
+</div>
+</div>
+<div class="mt-8 flex items-center gap-2 text-secondary font-semibold text-sm">
+<span class="material-symbols-outlined text-lg">verified</span>
+<span>Live Market Sync</span>
+</div>
+</div>
+<!-- Interrupter Risk Card -->
+<div class="bg-surface-container-lowest p-6 rounded-3xl">
+<span class="font-label text-xs font-semibold uppercase tracking-wider text-on-surface-variant block mb-6">Interrupter Risk Level</span>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<span class="font-label text-sm font-bold text-on-surface">Current Status</span>
+<div class="px-3 py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant text-xs font-bold uppercase tracking-wide">
+                            Medium
+                        </div>
+</div>
+<!-- Visual Gauge -->
+<div class="flex gap-1.5 h-2">
+<div class="flex-1 rounded-full bg-secondary"></div>
+<div class="flex-1 rounded-full bg-tertiary-fixed"></div>
+<div class="flex-1 rounded-full bg-surface-container-high"></div>
+<div class="flex-1 rounded-full bg-surface-container-high"></div>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed mt-4">Market variance is currently within the moderate range, monitoring closely.</p></div>
+</div>
+</div>
+<!-- Cycle Flow Section -->
+<section class="bg-surface-container-low p-6 rounded-3xl">
+<div class="flex justify-between items-center mb-6">
+<span class="font-label text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Cycle Flow Progress</span>
+<span class="font-label text-xs font-bold text-primary">4 Days Remaining</span>
+</div>
+<div class="relative py-4">
+<div class="absolute top-1/2 left-0 w-full h-1.5 bg-surface-container-high -translate-y-1/2 rounded-full"></div>
+<div class="absolute top-1/2 left-0 w-3/5 h-1.5 bg-primary -translate-y-1/2 rounded-full"></div>
+<div class="relative flex justify-between">
+<div class="flex flex-col items-center gap-2">
+<div class="w-4 h-4 rounded-full bg-primary border-4 border-surface-container-low z-10"></div>
+<span class="font-label text-[10px] font-bold text-on-surface-variant uppercase">Thu Start</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-4 h-4 rounded-full bg-primary border-4 border-surface-container-low z-10 shadow-sm shadow-primary/40"></div>
+<span class="font-label text-[10px] font-bold text-primary uppercase">Today</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-4 h-4 rounded-full bg-surface-container-highest border-4 border-surface-container-low z-10"></div>
+<span class="font-label text-[10px] font-bold text-on-surface-variant uppercase">Wed End</span>
+</div>
+</div>
+</div>
+</section>
+<!-- CTA Action -->
+<button class="w-full bg-primary py-5 rounded-2xl group active:scale-[0.98] transition-all duration-200 shadow-xl shadow-primary/10 overflow-hidden relative">
+<div class="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors"></div>
+<div class="flex items-center justify-center gap-3 relative z-10">
+<span class="text-white font-manrope font-bold text-lg">Explore Our Model</span>
+<span class="material-symbols-outlined text-white group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</div>
+</button>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 pb-safe bg-white/80 backdrop-blur-md border-t border-slate-100 z-50 rounded-t-xl shadow-[0_-4px_20px_0_rgba(25,28,29,0.04)]">
+<!-- Market (Active) -->
+<a class="flex flex-col items-center justify-center bg-blue-50 text-blue-900 rounded-xl px-6 py-2 active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">query_stats</span>
+<span class="font-inter text-[11px] font-semibold uppercase tracking-wider">Market</span>
+</a>
+<!-- Trends (Inactive) -->
+<a class="flex flex-col items-center justify-center text-slate-400 px-6 py-2 hover:text-blue-800 active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined mb-1">trending_up</span>
+<span class="font-inter text-[11px] font-semibold uppercase tracking-wider">Trends</span>
+</a>
+</nav>
+</body></html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fuel Architect - Refined Trends</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-primary-container": "#90a8ff",
+              "secondary-fixed": "#6ffbbe",
+              "on-tertiary-fixed": "#2a1700",
+              "surface-dim": "#d9dadb",
+              "on-secondary-container": "#00714d",
+              "tertiary-fixed-dim": "#ffb95f",
+              "secondary": "#006c49",
+              "inverse-surface": "#2e3132",
+              "tertiary": "#3e2400",
+              "surface-container-low": "#f3f4f5",
+              "outline-variant": "#c5c5d3",
+              "on-primary-fixed": "#00164e",
+              "surface-variant": "#e1e3e4",
+              "surface-bright": "#f8f9fa",
+              "tertiary-container": "#5c3800",
+              "surface-tint": "#4059aa",
+              "surface-container-high": "#e7e8e9",
+              "on-secondary-fixed-variant": "#005236",
+              "error": "#ba1a1a",
+              "on-surface": "#191c1d",
+              "primary-fixed-dim": "#b6c4ff",
+              "on-background": "#191c1d",
+              "outline": "#757682",
+              "on-secondary-fixed": "#002113",
+              "secondary-container": "#6cf8bb",
+              "on-secondary": "#ffffff",
+              "on-tertiary": "#ffffff",
+              "error-container": "#ffdad6",
+              "on-surface-variant": "#444651",
+              "background": "#f8f9fa",
+              "secondary-fixed-dim": "#4edea3",
+              "on-tertiary-container": "#ef9900",
+              "inverse-primary": "#b6c4ff",
+              "tertiary-fixed": "#ffddb8",
+              "on-primary-fixed-variant": "#264191",
+              "surface-container-lowest": "#ffffff",
+              "inverse-on-surface": "#f0f1f2",
+              "on-tertiary-fixed-variant": "#653e00",
+              "surface-container": "#edeeef",
+              "on-error-container": "#93000a",
+              "primary-fixed": "#dce1ff",
+              "on-primary": "#ffffff",
+              "primary-container": "#1e3a8a",
+              "primary": "#00236f",
+              "on-error": "#ffffff",
+              "surface-container-highest": "#e1e3e4",
+              "surface": "#f8f9fa"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .chart-grid-line {
+            stroke: #e7e8e9;
+            stroke-width: 1;
+        }
+        body {
+          min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-background font-body text-on-surface">
+<!-- TopAppBar -->
+<header class="fixed top-0 z-50 w-full bg-slate-50 flex items-center justify-between px-6 h-16">
+<div class="flex items-center gap-4">
+<h1 class="text-blue-900 font-manrope font-extrabold tracking-tight text-lg">Fuel Architect</h1>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-500 hover:bg-slate-200/50 p-2 rounded-full transition-colors" data-icon="search">search</span>
+<span class="material-symbols-outlined text-slate-500 hover:bg-slate-200/50 p-2 rounded-full transition-colors" data-icon="notifications">notifications</span>
+</div>
+</header>
+<main class="pt-20 pb-24 px-4 md:px-8 max-w-7xl mx-auto space-y-6">
+<!-- Header Section -->
+<section class="mb-8">
+<h2 class="font-headline font-bold text-3xl text-primary tracking-tight">Refined Trends</h2>
+<div class="flex items-center gap-2 mt-2">
+<span class="bg-secondary/10 text-secondary text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase">Live Market Data</span>
+<span class="text-on-surface-variant text-xs font-medium">Updated: Oct 24, 08:45 AM</span>
+</div>
+</section>
+<!-- Main Chart Section -->
+<div class="grid grid-cols-1 gap-6">
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/15">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+<div>
+<h3 class="font-headline font-bold text-lg text-primary">Price Divergence Analysis</h3>
+<p class="text-on-surface-variant text-sm">EUB Max Price vs Market RBOB Cost (90 Day Window)</p>
+</div>
+<div class="flex items-center gap-4 bg-surface-container-low p-1 rounded-lg">
+<button class="px-4 py-1.5 text-xs font-semibold rounded-md bg-surface-container-lowest shadow-sm text-primary">90D</button>
+<button class="px-4 py-1.5 text-xs font-semibold text-on-surface-variant hover:text-primary transition-colors">180D</button>
+<button class="px-4 py-1.5 text-xs font-semibold text-on-surface-variant hover:text-primary transition-colors">1Y</button>
+</div>
+</div>
+<!-- SVG Dual Axis Chart Representation -->
+<div class="relative w-full aspect-[16/9] bg-surface-container-low/30 rounded-lg overflow-hidden flex items-end px-4 py-8">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 800 400">
+<line class="chart-grid-line" x1="0" x2="800" y1="350" y2="350"></line>
+<line class="chart-grid-line" x1="0" x2="800" y1="250" y2="250"></line>
+<line class="chart-grid-line" x1="0" x2="800" y1="150" y2="150"></line>
+<line class="chart-grid-line" x1="0" x2="800" y1="50" y2="50"></line>
+<!-- Market RBOB Cost Smooth Line (Right Axis) -->
+<path d="M0,320 C100,300 150,340 250,220 C350,100 450,180 550,140 C650,100 750,160 800,80" fill="none" stroke="#4059aa" stroke-width="3"></path>
+<path d="M0,320 C100,300 150,340 250,220 C350,100 450,180 550,140 C650,100 750,160 800,80 V400 H0 Z" fill="url(#grad-rbob)" opacity="0.08"></path>
+<!-- EUB Max Price Step Line (Left Axis) -->
+<path d="M0,350 H100 V320 H250 V280 H400 V220 H550 V180 H700 V150 H800" fill="none" stroke="#00236f" stroke-linejoin="miter" stroke-width="4"></path>
+<defs>
+<lineargradient id="grad-rbob" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" style="stop-color:#4059aa;stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:#4059aa;stop-opacity:0"></stop>
+</lineargradient>
+</defs>
+</svg>
+<!-- Axis Labels in ¢/L -->
+<div class="absolute left-2 top-0 bottom-0 flex flex-col justify-between py-8 text-[10px] font-bold text-primary opacity-60">
+<span>220¢/L</span><span>190¢/L</span><span>160¢/L</span><span>130¢/L</span><span>100¢/L</span>
+</div>
+<div class="absolute right-2 top-0 bottom-0 flex flex-col justify-between py-8 text-[10px] font-bold text-surface-tint opacity-60">
+<span>280¢/L</span><span>240¢/L</span><span>200¢/L</span><span>160¢/L</span><span>120¢/L</span>
+</div>
+</div>
+<div class="flex justify-center gap-8 mt-6">
+<div class="flex items-center gap-2">
+<div class="w-4 h-1 bg-primary"></div>
+<span class="text-xs font-semibold text-on-surface">EUB Max Price (¢/L)</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-4 h-1 bg-surface-tint"></div>
+<span class="text-xs font-semibold text-on-surface">Market RBOB Cost</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Historical Adjustments Table Section -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/15 overflow-hidden mt-8">
+<div class="px-6 py-5 border-b border-surface-container-low flex justify-between items-center">
+<h3 class="font-headline font-bold text-lg text-primary">Historical Adjustments</h3>
+<button class="text-primary text-xs font-bold flex items-center gap-1 hover:underline">
+<span class="material-symbols-outlined text-sm" data-icon="download">download</span>
+                    Export CSV
+                </button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low/50">
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Effective Date</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Adjustment Type</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Max Price (¢/L)</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Delta</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Market Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low">
+<tr class="hover:bg-surface-container-low/30 transition-colors">
+<td class="px-6 py-4 font-medium text-sm text-primary">Oct 21, 2023</td>
+<td class="px-6 py-4 text-xs font-semibold text-on-surface-variant">Scheduled</td>
+<td class="px-6 py-4 font-bold text-sm text-on-surface">194.2</td>
+<td class="px-6 py-4 text-xs font-bold text-secondary">+1.2¢</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 rounded-sm bg-secondary/10 text-secondary text-[10px] font-bold uppercase">Stable</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/30 transition-colors">
+<td class="px-6 py-4 font-medium text-sm text-primary">Oct 14, 2023</td>
+<td class="px-6 py-4 text-xs font-semibold text-on-surface-variant">Interrupter</td>
+<td class="px-6 py-4 font-bold text-sm text-on-surface">193.0</td>
+<td class="px-6 py-4 text-xs font-bold text-error">-4.5¢</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 rounded-sm bg-tertiary/10 text-tertiary text-[10px] font-bold uppercase">Volatile</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/30 transition-colors">
+<td class="px-6 py-4 font-medium text-sm text-primary">Oct 07, 2023</td>
+<td class="px-6 py-4 text-xs font-semibold text-on-surface-variant">Scheduled</td>
+<td class="px-6 py-4 font-bold text-sm text-on-surface">197.5</td>
+<td class="px-6 py-4 text-xs font-bold text-secondary">+0.8¢</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 rounded-sm bg-secondary/10 text-secondary text-[10px] font-bold uppercase">Stable</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/30 transition-colors">
+<td class="px-6 py-4 font-medium text-sm text-primary">Sep 30, 2023</td>
+<td class="px-6 py-4 text-xs font-semibold text-on-surface-variant">Scheduled</td>
+<td class="px-6 py-4 font-bold text-sm text-on-surface">196.7</td>
+<td class="px-6 py-4 text-xs font-bold text-on-surface-variant">0.0¢</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 rounded-sm bg-slate-200 text-slate-600 text-[10px] font-bold uppercase">Neutral</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-6 py-4 bg-surface-container-low/20 flex justify-center border-t border-surface-container-low">
+<button class="text-primary font-bold text-xs uppercase tracking-widest hover:text-surface-tint transition-colors">View All Historical Data</button>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 pb-safe bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-100 shadow-[0_-4px_20px_0_rgba(25,28,29,0.04)] z-50 rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-slate-400 px-6 py-2 hover:text-blue-800 transition-transform active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="query_stats" style="font-variation-settings: 'FILL' 0;">query_stats</span>
+<span class="font-inter text-[11px] font-semibold uppercase tracking-wider">Market</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-blue-50 text-blue-900 rounded-xl px-6 py-2 transition-transform active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="trending_up" style="font-variation-settings: 'FILL' 1;">trending_up</span>
+<span class="font-inter text-[11px] font-semibold uppercase tracking-wider">Trends</span>
+</a>
+</nav>
+</body></html>
