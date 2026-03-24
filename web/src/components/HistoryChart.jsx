@@ -17,16 +17,39 @@ const HistoryChart = () => {
   }, []);
 
   useEffect(() => {
-    if (!data || !chartRef.current) return;
+    if (!data || !data.data || !chartRef.current) return;
 
     const chart = echarts.init(chartRef.current);
+    const payload = data.data;
     
-    // Process data for step line and smooth line
-    const eubDates = data.eub.map(d => d.date).reverse();
-    const eubPrices = data.eub.map(d => d.max_price).reverse();
+    // 实施 6.3 节：数据拉链式合并与前向填充算法 (LOCF)
+    const eubData = payload.eub_history || [];
+    const marketData = payload.market_history || [];
     
-    const marketDates = data.market.map(d => d.date).reverse();
-    const marketPrices = data.market.map(d => d.rbob_cad_base).reverse();
+    // 1. 提取并排序所有唯一日期
+    const allDates = Array.from(new Set([
+      ...eubData.map(d => d.effective_date),
+      ...marketData.map(d => d.date)
+    ])).sort();
+
+    // 2. 状态保持器
+    let lastEub = null;
+    let lastMarket = null;
+    
+    const mergedData = allDates.map(date => {
+       const eubMatch = eubData.find(d => d.effective_date === date);
+       if (eubMatch) lastEub = eubMatch.max_price;
+       
+       const marketMatch = marketData.find(d => d.date === date);
+       if (marketMatch) lastMarket = marketMatch.rbob_cad_base;
+       
+       return { date, eubPrice: lastEub, marketPrice: lastMarket };
+    });
+
+    const xAxisDates = mergedData.map(d => d.date);
+    // 过滤掉初期的 null 值，保持图表连贯
+    const eubPrices = mergedData.map(d => d.eubPrice === null ? undefined : d.eubPrice);
+    const marketPrices = mergedData.map(d => d.marketPrice === null ? undefined : d.marketPrice);
 
     const option = {
       backgroundColor: 'transparent',
@@ -46,36 +69,39 @@ const HistoryChart = () => {
       },
       xAxis: {
         type: 'category',
-        data: Array.from(new Set([...eubDates, ...marketDates])).sort(),
+        data: xAxisDates,
         axisLine: { lineStyle: { color: '#e7e8e9' } }
       },
+      // 实施 7.4 节：强制双 Y 轴对比
       yAxis: [
         {
           type: 'value',
           name: '¢/L (EUB)',
           axisLine: { lineStyle: { color: '#00236f' } },
-          splitLine: { lineStyle: { color: '#e7e8e9' } }
+          splitLine: { lineStyle: { color: '#e7e8e9' } },
+          scale: true
         },
         {
           type: 'value',
           name: '¢/L (Market)',
           axisLine: { lineStyle: { color: '#4059aa' } },
-          splitLine: { show: false }
+          splitLine: { show: false },
+          scale: true
         }
       ],
       series: [
         {
           name: 'EUB Max Price',
           type: 'line',
-          step: 'end',
+          step: 'end', // 实施 7.4 节：强制阶梯图
           data: eubPrices,
           itemStyle: { color: '#00236f' },
-          lineStyle: { width: 4 }
+          lineStyle: { width: 3 }
         },
         {
           name: 'Market RBOB Cost',
           type: 'line',
-          yAxisIndex: 1,
+          yAxisIndex: 1, // 绑定到右侧的辅助轴
           smooth: true,
           data: marketPrices,
           itemStyle: { color: '#4059aa' },
@@ -100,7 +126,8 @@ const HistoryChart = () => {
   }, [data]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
+      {/* 按照 v1.9 要求，去掉了此处的后退箭头，保持 Trends 独立的一级路由身份 */}
       <section className="mb-8">
         <h2 className="font-headline font-bold text-3xl text-primary tracking-tight">Refined Trends</h2>
         <div className="flex items-center gap-2 mt-2">

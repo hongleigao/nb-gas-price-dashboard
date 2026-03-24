@@ -1,10 +1,41 @@
 import React from 'react';
 
 const HeroBoard = ({ data, onExplore }) => {
-  const { current_price, forecast } = data || {};
-  const { predicted_change, pump_estimated, risk_level } = forecast || {};
+  // 按照 v1.9 契约，从 Envelope 结构中解析数据
+  const payload = data?.data || {};
+  const { current_eub, benchmark_price, market_cycle } = payload;
   
-  const isFalling = predicted_change < 0;
+  // 1. 前端自行计算市区预估价 (限价 - 5.5)
+  const pump_estimated = current_eub ? (current_eub.max_price - 5.5).toFixed(1) : '...';
+  
+  // 2. 前端自行计算最新预测变化值
+  const latest_market = market_cycle?.length > 0 ? market_cycle[market_cycle.length - 1] : null;
+  let predicted_change = 0;
+  let risk_level = 'Low';
+  let isFalling = false;
+
+  if (latest_market && benchmark_price) {
+     predicted_change = (latest_market.absolute_price - benchmark_price);
+     isFalling = predicted_change < 0;
+     
+     // 3. 前端自行推演 4 级熔断风险 (基于 6.2 节规范)
+     const abs_change = Math.abs(predicted_change);
+     if (abs_change >= 5.0 || (current_eub && current_eub.is_interrupter === 1)) {
+         risk_level = 'Alert';
+     } else if (abs_change >= 4.0) {
+         risk_level = 'High';
+     } else if (abs_change >= 3.0) {
+         risk_level = 'Medium';
+     }
+  }
+
+  const formattedChange = Math.abs(predicted_change).toFixed(2);
+  
+  // 基于风险等级本地映射静态文案，不依赖后端
+  let riskMessage = 'Market variance is currently low. Stable outlook.';
+  if (risk_level === 'Alert') riskMessage = 'Critical volatility detected. Interrupter conditions met.';
+  else if (risk_level === 'High') riskMessage = 'High variance detected. Elevated risk of adjustment.';
+  else if (risk_level === 'Medium') riskMessage = 'Market variance is currently within the moderate range, monitoring closely.';
 
   return (
     <div className="space-y-6">
@@ -16,7 +47,7 @@ const HeroBoard = ({ data, onExplore }) => {
             <div>
               <span className="font-label text-[11px] font-semibold uppercase tracking-widest text-on-primary-container mb-2 block">Forecast: Next Cycle</span>
               <h1 className="font-headline font-extrabold text-4xl text-white tracking-tight">
-                {isFalling ? '' : '+'}{predicted_change}c
+                {isFalling ? '-' : '+'}{formattedChange}c
               </h1>
             </div>
             <div className="bg-secondary/20 backdrop-blur-md rounded-full px-4 py-1.5 flex items-center gap-2 border border-secondary/30">
@@ -57,18 +88,24 @@ const HeroBoard = ({ data, onExplore }) => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="font-label text-sm font-bold text-on-surface">Current Status</span>
-              <div className="px-3 py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant text-xs font-bold uppercase tracking-wide">
+              <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide
+                ${risk_level === 'Alert' ? 'bg-error text-error-container' : 
+                  risk_level === 'High' ? 'bg-orange-500 text-white' : 
+                  risk_level === 'Medium' ? 'bg-tertiary-fixed text-on-tertiary-fixed-variant' : 
+                  'bg-secondary text-on-secondary'}
+              `}>
                 {risk_level}
               </div>
             </div>
+            {/* 4级状态条 */}
             <div className="flex gap-1.5 h-2">
-              <div className="flex-1 rounded-full bg-secondary"></div>
-              <div className={`flex-1 rounded-full ${risk_level !== 'Low' ? 'bg-tertiary-fixed' : 'bg-surface-container-high'}`}></div>
+              <div className={`flex-1 rounded-full ${['Low', 'Medium', 'High', 'Alert'].includes(risk_level) ? 'bg-secondary' : 'bg-surface-container-high'}`}></div>
+              <div className={`flex-1 rounded-full ${['Medium', 'High', 'Alert'].includes(risk_level) ? 'bg-tertiary-fixed' : 'bg-surface-container-high'}`}></div>
+              <div className={`flex-1 rounded-full ${['High', 'Alert'].includes(risk_level) ? 'bg-orange-500' : 'bg-surface-container-high'}`}></div>
               <div className={`flex-1 rounded-full ${risk_level === 'Alert' ? 'bg-error' : 'bg-surface-container-high'}`}></div>
-              <div className="flex-1 rounded-full bg-surface-container-high"></div>
             </div>
             <p className="text-xs text-on-surface-variant leading-relaxed mt-4">
-              {risk_level === 'Medium' ? 'Market variance is currently within the moderate range, monitoring closely.' : 'Market is currently stable.'}
+              {riskMessage}
             </p>
           </div>
         </div>
