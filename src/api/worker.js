@@ -62,7 +62,20 @@ async function handleLatest(db, headers) {
       commodity: stats.commodity_id,
       debug: { 
           source: "V6.0_SQL_VIEW",
-          benchmarks: { ref_rbob: stats.ref_rbob, cur_rbob: stats.current_rbob }
+          window_avg_usd: parseFloat(stats.window_avg.toFixed(4)),
+          window_avg_cents: parseFloat(windowAvgCents.toFixed(2)),
+          current_eub_price_cents: stats.current_eub_price,
+          active_base_cents: 45.42,
+          impacts: {
+              commodity: parseFloat(stats.commodity_impact_cents.toFixed(2)),
+              fx: parseFloat(stats.fx_impact_cents.toFixed(2))
+          },
+          benchmarks: { 
+              ref_rbob: stats.ref_rbob, 
+              cur_rbob: stats.current_rbob,
+              ref_fx: stats.ref_fx,
+              cur_fx: stats.current_fx
+          }
       }
     },
     prediction: {
