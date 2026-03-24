@@ -129,10 +129,10 @@
     </div>
 
     <script>
-        // 自动探测 API 地址：本地开发用 8787，生产环境用相对路径
+        // V6.0 生产环境指向：显式指定 Cloudflare Worker 地址
         const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
             ? 'http://localhost:8787' 
-            : '';
+            : 'https://nb-gas-pulse-api.honglei-gao.workers.dev';
 
         async function init() {
             console.log("Using API Base:", API_BASE || "Relative Path");
