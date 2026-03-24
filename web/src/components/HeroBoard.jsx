@@ -8,25 +8,32 @@ const HeroBoard = ({ data, onExplore }) => {
   // 1. 前端自行计算市区预估价 (限价 - 5.5)
   const pump_estimated = current_eub ? (current_eub.max_price - 5.5).toFixed(1) : '...';
   
-  // 2. 前端自行计算最新预测变化值
-  const latest_market = market_cycle?.length > 0 ? market_cycle[market_cycle.length - 1] : null;
-  let predicted_change = 0;
-  let risk_level = 'Low';
-  let isFalling = false;
+  // 2. 修正：严格执行 5日均值减去熔断 的算法
+  const validDays = market_cycle || [];
+  const n = validDays.length;
+  let avgVariance = 0;
+  let currentCumulative = 0;
 
-  if (latest_market && benchmark_price) {
-     predicted_change = (latest_market.absolute_price - benchmark_price);
-     isFalling = predicted_change < 0;
-     
-     // 3. 前端自行推演 4 级熔断风险 (基于 6.2 节规范)
-     const abs_change = Math.abs(predicted_change);
-     if (abs_change >= 5.0 || (current_eub && current_eub.is_interrupter === 1)) {
-         risk_level = 'Alert';
-     } else if (abs_change >= 4.0) {
-         risk_level = 'High';
-     } else if (abs_change >= 3.0) {
-         risk_level = 'Medium';
-     }
+  if (n > 0 && benchmark_price) {
+    const sum = validDays.reduce((acc, d) => acc + (d.absolute_price - benchmark_price), 0);
+    avgVariance = sum / n;
+    currentCumulative = Math.abs(avgVariance);
+  }
+
+  const intVar = (current_eub && current_eub.is_interrupter === 1) ? (current_eub.interrupter_variance || 0) : 0;
+  
+  // 最终预测值 = 平均偏离值 - 周期内已发生的熔断变化值
+  let predicted_change = avgVariance - intVar;
+  let isFalling = predicted_change < 0;
+
+  // 3. 修正：修复熔断状态持久化的 Bug (不再受 current_eub 的历史影响)
+  let risk_level = 'Low';
+  if (currentCumulative >= 5.0) {
+      risk_level = 'Alert';
+  } else if (currentCumulative >= 4.0) {
+      risk_level = 'High';
+  } else if (currentCumulative >= 3.0) {
+      risk_level = 'Medium';
   }
 
   const formattedChange = Math.abs(predicted_change).toFixed(2);

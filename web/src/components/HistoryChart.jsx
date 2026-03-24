@@ -55,7 +55,19 @@ const HistoryChart = () => {
       backgroundColor: 'transparent',
       tooltip: {
         trigger: 'axis',
-        axisPointer: { type: 'cross' }
+        axisPointer: { type: 'cross' },
+        formatter: function(params) {
+            let html = `<div>${params[0].axisValue}</div>`;
+            params.forEach(p => {
+                if (p.seriesName === 'EUB Max Price') {
+                    html += `<div>${p.marker} ${p.seriesName}: <b>${p.value !== undefined ? p.value + ' ¢/L' : '-'}</b></div>`;
+                } else {
+                    // 为市场价补充 美元/加仑 的明示格式化
+                    html += `<div>${p.marker} ${p.seriesName}: <b>${p.value !== undefined ? '$' + p.value.toFixed(3) + ' CAD/gal' : '-'}</b></div>`;
+                }
+            });
+            return html;
+        }
       },
       legend: {
         bottom: 0,
@@ -83,10 +95,12 @@ const HistoryChart = () => {
         },
         {
           type: 'value',
-          name: '¢/L (Market)',
+          name: 'Market (CAD/gal)',
           axisLine: { lineStyle: { color: '#4059aa' } },
           splitLine: { show: false },
-          scale: true
+          scale: true,
+          // 为右侧坐标轴补充金钱符号
+          axisLabel: { formatter: '${value} CAD' }
         }
       ],
       series: [
