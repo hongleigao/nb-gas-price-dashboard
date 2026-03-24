@@ -77,7 +77,8 @@
         .down { color: var(--primary); }
         .stable { color: var(--text-dim); }
         
-        #debug-toggle { margin-top: 40px; font-size: 0.7rem; color: #333; text-align: center; cursor: pointer; }
+        #debug-toggle { margin-top: 40px; font-size: 0.7rem; color: #333; text-align: center; cursor: pointer; padding: 10px; border: 1px dashed #333; border-radius: 8px; }
+        #debug-panel { display: none; background: #000; color: #0f0; font-family: monospace; font-size: 0.7rem; padding: 15px; margin-top: 20px; border-radius: 12px; white-space: pre-wrap; border: 1px solid #0f0; overflow-x: auto; }
     </style>
 </head>
 <body>
@@ -126,10 +127,11 @@
         </main>
 
         <div id="debug-toggle">DEBUG MODE OFF</div>
+        <div id="debug-panel">Waiting for data...</div>
     </div>
 
     <script>
-        const APP_VERSION = "6.0.2";
+        const APP_VERSION = "6.0.3";
         // V6.0 生产环境指向：显式指定 Cloudflare Worker 地址
         const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
             ? 'http://localhost:8787' 
@@ -160,25 +162,28 @@
             const p = data.prediction;
             const changeEl = document.getElementById('main-change');
             
-            // 1. 主预测值 (单位修正：数据库返回 112.9 这种分，Worker 计算出 0.1 这种变化)
+            // 1. 调试信息渲染
+            const debugPanel = document.getElementById('debug-panel');
+            debugPanel.innerText = JSON.stringify(data.metadata.debug, null, 2);
+
+            // 2. 主预测值
             const sign = p.change > 0 ? '+' : '';
             changeEl.innerText = `${sign}${p.change.toFixed(1)}`;
             changeEl.innerHTML += `<span class="unit">¢/L</span>`;
             changeEl.className = `price-change ${p.direction}`;
 
-            // 2. 压力表
+            // 3. 压力表
             document.getElementById('sync-time').innerText = new Date(data.metadata.last_sync).toLocaleTimeString();
             document.getElementById('impact-comm').innerText = `${p.spot_attribution.commodity > 0 ? '+' : ''}${p.spot_attribution.commodity}¢`;
             document.getElementById('impact-fx').innerText = `${p.spot_attribution.fx > 0 ? '+' : ''}${p.spot_attribution.fx}¢`;
             
-            // 压力表逻辑：计算原油占总影响的比例
             const totalAbs = Math.abs(p.spot_attribution.commodity) + Math.abs(p.spot_attribution.fx);
             const commRatio = totalAbs > 0 ? (Math.abs(p.spot_attribution.commodity) / totalAbs) * 100 : 50;
             const bar = document.getElementById('gauge-bar');
             bar.style.width = `${commRatio}%`;
             bar.style.background = p.spot_attribution.commodity > 0 ? 'var(--danger)' : 'var(--primary)';
 
-            // 3. 窗口列表 (单位转换：美元转分展示)
+            // 4. 窗口列表
             const list = document.getElementById('window-list');
             list.innerHTML = p.window.breakdown.map(d => `
                 <div class="window-day ${d.is_final ? 'is-final' : ''}">
@@ -204,7 +209,6 @@
 
         function renderChart(data) {
             const ctx = document.getElementById('historyChart').getContext('2d');
-            // 单位转换：ymex_prices (美元) 转为分
             const nymex_cents = data.nymex_prices.map(v => v * 100);
             
             new Chart(ctx, {
@@ -247,6 +251,19 @@
                 }
             });
         }
+
+        // Debug Toggle Logic
+        document.getElementById('debug-toggle').onclick = () => {
+            const panel = document.getElementById('debug-panel');
+            const toggle = document.getElementById('debug-toggle');
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+                toggle.innerText = 'DEBUG MODE OFF';
+            } else {
+                panel.style.display = 'block';
+                toggle.innerText = 'DEBUG MODE ON';
+            }
+        };
 
         init();
     </script>
