@@ -1,41 +1,46 @@
 # 任务计划：NB油价预测系统 - Serverless 数据库化重构 (Expert)
 
 ## 目标
-实现“数据状态 (D1 DB)”与“计算逻辑 (Worker/API)”的彻底解耦。引入 Cloudflare D1 数据库，将油价预测系统从静态 JSON 模式升级为动态 SQL 计算模式，解决时间序列回测与扩展性难题。
+实现“数据状态 (D1 DB)”与“计算逻辑 (Worker/API)”的彻底解耦。通过“薄 Worker，厚数据库”的策略，提升系统的健壮性、可测试性与扩展性。
 
 ## 各阶段状态
 
-### 阶段 7：Serverless 数据库化重构 (已完成)
-- [x] **基础设施定义 (Schema)**：创建 `schema.sql` (nymex_market_data, eub_regulations)。
-- [x] **数据推送器重构 (Pusher)**：重构 `update_data.py` 使用 Cloudflare D1 REST API 进行写入。
-- [x] **核心 API 开发 (The Brain)**：编写 Cloudflare Worker 实现 SQL 窗口聚合、归因拆解与日历轴补全。
-- [x] **UI 动态适配**：重构 `index.html` 接入 Worker API，实现工业精密风格 UI。
+### 阶段 7 - 8：Serverless 数据库化与自动化部署 (已完成)
+- [x] **基础设施定义 (Schema)**：初始 D1 表结构。
+- [x] **自动化部署**：集成 Cloudflare Wrangler Action。
+- [x] **逻辑修正**：对齐 5 日窗口均值算法。
 - **状态：** complete
 
-### 阶段 7.5：项目结构重组 (已完成)
-- [x] **目录分层**：实施 Option A 科技栈分层 (Frontend, API, Data, Scripts, Tests, Docs)。
-- [x] **冗余清理**：删除了 `data.json` 及 8 个旧版测试与辅助脚本。
-- [x] **CI/CD 适配**：修正了 GitHub Actions 执行路径与发布目录至 `src/frontend`。
-- **状态：** complete
+---
 
-### 阶段 8：生产级稳健性与逻辑优化 (已完成)
-- [x] **自动化部署**：集成 Cloudflare Wrangler Action，实现 Worker 自动部署。
-- [x] **预测逻辑闭环**：修正 5 日窗口均值算法，确保 UI 数据闭环。
-- [x] **归因语义化**：重构 "Price Driver" 为 "Spot Drive" 并增加解释文案，消除用户困惑。
-- **状态：** complete
+### 阶段 9：工业级架构重构 (V6.0) - 当前重点
+#### 1. 数据库模型规范化 (Database Expert)
+- [ ] **实施“大清洗 (Big Wipe)”**：删除现有表，按新规范重建。
+- [ ] **引入时间戳驱动**：使用 `captured_at` 替代手动 `is_final` 字段。
+- [ ] **基准锚点优化**：在 `eub_regulations` 中仅存储官方价格，归因基准通过 SQL 关联查询获取。
+- [ ] **创建 SQL View (视图)**：
+    - `view_market_final`：自动筛选每日最终有效收盘价。
+    - `view_window_stats`：在 SQL 层完成 5 日均值与 3 日滚动均值计算。
 
-## 后续阶段 (Future Phases)
-### 阶段 9：多能源扩展 (V5.3)
-- [ ] **Schema 扩展**：更新 `schema.sql` 支持 Diesel 与 Furnace Oil。
-- [ ] **ETL 增强**：修改 `update_data.py` 同步多能源 NYMEX 数据。
-- [ ] **UI 多品种切换**：在前端增加能源类型选择器。
+#### 2. 计算逻辑下沉与性能优化 (System Architect)
+- [ ] **薄 Worker 重构**：Worker 只负责路由和 JSON 组装，不再执行复杂的 Map/Reduce。
+- [ ] **数据分级加载**：
+    - `/api/latest`：仅返回今日决策与 5 日窗口（Payload < 2KB）。
+    - `/api/history`：按需请求 2 年历史图表数据。
+- [ ] **异常防御边界**：实现 Try-Catch 全覆盖，确保数据库空值时 UI 显示“Data Pending”而非白屏。
 
-### 阶段 10：边缘计算优化
-- [ ] **边缘缓存**：利用 Cloudflare KV 实现 1 小时 API 响应缓存。
+#### 3. 代码模块化与可维护性 (Senior Developer)
+- [ ] **计算库解耦**：将 EUB 计价公式提取为独立模块。
+- [ ] **日志审计增强**：在 D1 中记录每次 ETL 运行的成功/失败状态。
+- [ ] **UI 视觉降噪**：引入“压力表”组件，将复杂的归因数字转化为直观的视觉反馈。
 
-## 已做决策
+## 后续阶段
+### 阶段 10：多能源扩展 (V6.1)
+- [ ] **Diesel/Furnace Oil 接入**：基于重构后的稳健模型快速横向扩展。
+
+## 关键决策记录
 | 决策 | 理由 |
 |------|------|
-| 锁定 5 日均值法 | 严格遵循 NB EUB 官方监管计价规则 |
-| 分离 Spot 与 Window | 区分“即时市场压力”与“最终调价预测”，提高透明度 |
-| 强制准实时同步 | 每天两次 GitHub Actions 是成本与实时性的最佳平衡点 |
+| SQL 视图优先 | 减少 JS 层的计算压力，利用 SQLite 的高性能聚合，确保数据一致性 |
+| 历史数据按需请求 | 极大地降低边缘计算成本与前端首屏加载时间 |
+| 时间戳驱动逻辑 | 彻底解决时差导致的日期打标错误，使数据具有可溯源性 |
