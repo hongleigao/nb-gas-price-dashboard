@@ -7,7 +7,7 @@ function getMonctonCycleDates() {
     });
     const todayStr = formatter.format(new Date());
     
-    // 修正：将 split 出来的字符串数组强制转换为 Number 类型
+    // 修正：将 split 出来的字符串数组强制转换为 Number 类型，避免 TypeScript 算术运算报错
     const [y, m, d] = todayStr.split('-').map(Number);
     
     // 使用 UTC 构建 Date 对象，避免服务器本地时区干扰推算
@@ -36,21 +36,38 @@ export async function handleCycle(request, env) {
     const db = env.D1_DB;
 
     try {
-        // 1. 获取当前正在生效的 EUB 官方限价
-        const { results: eubData } = await db.prepare(
-            "SELECT effective_date, max_price, is_interrupter, interrupter_variance FROM eub_prices ORDER BY effective_date DESC LIMIT 1"
-        ).all();
-
-        if (eubData.length === 0) {
-            return new Response(JSON.stringify({ 
-                status: "error", 
-                error: { code: "NO_DATA", message: 'No EUB price data available' } 
-            }), { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } });
-        }
-        const currentEub = eubData[0];
-
-        // 2. 动态计算日历窗口
+        // 1. 动态计算出日历窗口
         const { currentStartStr, prevStartStr } = getMonctonCycleDates();
+
+        // 2. 获取本周期内【所有的】EUB 记录，应对多次熔断累加
+        const { results: cycleEubData } = await db.prepare(
+            "SELECT effective_date, max_price, is_interrupter, interrupter_variance FROM eub_prices WHERE effective_date >= ? ORDER BY effective_date ASC"
+        ).bind(currentStartStr).all();
+
+        let currentEub = null;
+        let interrupterTotal = 0.0;
+
+        if (cycleEubData.length > 0) {
+            // 取最后一条作为当前正在生效的终端限价
+            currentEub = cycleEubData[cycleEubData.length - 1]; 
+            // 【核心修正】累加本周期内所有的熔断偏离值，解决单周期内2次及以上熔断的 Bug
+            interrupterTotal = cycleEubData
+                .filter(r => r.is_interrupter === 1)
+                .reduce((sum, r) => sum + (r.interrupter_variance || 0), 0);
+        } else {
+            // 兜底逻辑：如果新周期刚开始还没任何记录，向前取最新一条
+            const { results: fallbackData } = await db.prepare(
+                "SELECT effective_date, max_price, is_interrupter, interrupter_variance FROM eub_prices ORDER BY effective_date DESC LIMIT 1"
+            ).all();
+            if (fallbackData.length === 0) {
+                return new Response(JSON.stringify({ 
+                    status: "error", 
+                    error: { code: "NO_DATA", message: 'No EUB price data available' } 
+                }), { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } });
+            }
+            currentEub = fallbackData[0];
+            interrupterTotal = currentEub.is_interrupter === 1 ? (currentEub.interrupter_variance || 0) : 0.0;
+        }
 
         // 3. 从数据库捞取包括“上一周期”和“当前周期”在内的所有市场数据
         const { results: marketData } = await db.prepare(
@@ -65,7 +82,7 @@ export async function handleCycle(request, env) {
             benchmarkPrice = parseFloat((sum / previousCycle.length).toFixed(4));
         }
 
-        // 5. 组装当前周期的数据数组 (匹配前端契约)
+        // 5. 组装当前周期的数据数组
         const marketCycle = marketData
             .filter(r => r.date >= currentStartStr)
             .map(r => ({
@@ -74,10 +91,10 @@ export async function handleCycle(request, env) {
                 is_weekend: r.is_weekend
             }));
 
-        // 6. 获取数据库最后同步时间，供前端触发降级策略
+        // 6. 获取最后同步时间
         const { results: syncData } = await db.prepare("SELECT max(date) as last_date FROM market_data").all();
 
-        // 7. 严格按 v1.9 文档 Envelope 结构组装响应
+        // 7. 组装响应 (包含新增的 interrupter_total)
         const responseData = {
             status: "success",
             data: {
@@ -88,6 +105,7 @@ export async function handleCycle(request, env) {
                     interrupter_variance: currentEub.interrupter_variance || 0.0
                 },
                 benchmark_price: benchmarkPrice,
+                interrupter_total: parseFloat(interrupterTotal.toFixed(4)),
                 market_cycle: marketCycle
             },
             meta: {
@@ -100,7 +118,7 @@ export async function handleCycle(request, env) {
             headers: {
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*',
-                'Cache-Control': 'public, max-age=1800' // CDN 防抖缓存
+                'Cache-Control': 'public, max-age=1800' // CDN 缓存 30 分钟
             },
         });
     } catch (e) {

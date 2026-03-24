@@ -2,7 +2,7 @@ import React from 'react';
 
 const CycleDetails = ({ onBack, data }) => {
   const payload = data?.data || {};
-  const { current_eub, market_cycle, benchmark_price } = payload;
+  const { current_eub, market_cycle, benchmark_price, interrupter_total } = payload;
 
   // --- 单位转换：加元/加仑 转换为 加分/升 ---
   const GAL_TO_LITER = 3.7854;
@@ -19,7 +19,10 @@ const CycleDetails = ({ onBack, data }) => {
   });
   const sumStr = variances.join(' ');
   
-  const intVar = (current_eub?.is_interrupter === 1) ? (current_eub.interrupter_variance || 0) : 0;
+  // 核心修正：优先读取 API 新增的周期内多次熔断累计值
+  const intVar = interrupter_total !== undefined 
+      ? interrupter_total 
+      : ((current_eub?.is_interrupter === 1) ? (current_eub.interrupter_variance || 0) : 0);
   const intVarStr = intVar > 0 ? `+${intVar.toFixed(2)}` : intVar.toFixed(2);
 
   let avgVariance = 0;
@@ -45,7 +48,7 @@ const CycleDetails = ({ onBack, data }) => {
       <section className="space-y-4">
         <h2 className="font-headline font-bold text-on-surface-variant tracking-tight text-sm uppercase px-2">Active Calculation Formula</h2>
         
-        {/* 完全展示动态数学方程式的区块 */}
+        {/* 完全展示动态数学方程式的区块，移除了假数据 */}
         <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/20 shadow-sm">
             <h3 className="text-xs font-bold text-outline-variant uppercase tracking-wider mb-4">Calculation Breakdown</h3>
             <div className="font-mono text-sm md:text-base text-on-surface bg-surface-container-low p-4 rounded-lg overflow-x-auto whitespace-nowrap">
@@ -75,7 +78,7 @@ const CycleDetails = ({ onBack, data }) => {
             const isLast = idx === validDays.length - 1;
             
             // 修复时区陷阱：手动拆分字符串生成本地日期，防止 UTC 偏移导致日期退后一天
-            const [y, m, d] = day.date.split('-');
+            const [y, m, d] = day.date.split('-').map(Number);
             const localDate = new Date(y, m - 1, d);
             
             return (

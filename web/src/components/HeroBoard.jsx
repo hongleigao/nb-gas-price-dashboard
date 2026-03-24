@@ -1,18 +1,17 @@
 import React from 'react';
 
 const HeroBoard = ({ data, onExplore }) => {
-  // 按照 v1.9 契约，从 Envelope 结构中解析数据
   const payload = data?.data || {};
-  const { current_eub, benchmark_price, market_cycle } = payload;
+  const { current_eub, benchmark_price, market_cycle, interrupter_total } = payload;
   
-  // --- 新增：将 加元/加仑 转换为 加分/升 (1 US Gallon = 3.7854 Litres) ---
+  // --- 汇率/单位转换：加元/加仑 转换为 加分/升 ---
   const GAL_TO_LITER = 3.7854;
   const benchmark_price_cl = benchmark_price ? (benchmark_price / GAL_TO_LITER) * 100 : 0;
   
-  // 1. 前端自行计算市区预估价 (限价 - 5.5)
+  // 1. 前端计算市区预估价 (最高限价 - 5.5)
   const pump_estimated = current_eub ? (current_eub.max_price - 5.5).toFixed(1) : '...';
   
-  // 2. 修正：严格执行 5日均值减去熔断 的算法，并统一使用 ¢/L 单位
+  // 2. 计算 5日均值减去熔断 的算法
   const validDays = market_cycle || [];
   const n = validDays.length;
   let avgVariance = 0;
@@ -28,13 +27,16 @@ const HeroBoard = ({ data, onExplore }) => {
     currentCumulative = Math.abs(avgVariance);
   }
 
-  const intVar = (current_eub && current_eub.is_interrupter === 1) ? (current_eub.interrupter_variance || 0) : 0;
+  // 优先使用 API 新增的多次熔断累加值 (interrupter_total)
+  const intVar = interrupter_total !== undefined 
+      ? interrupter_total 
+      : ((current_eub?.is_interrupter === 1) ? (current_eub.interrupter_variance || 0) : 0);
   
-  // 最终预测值 = 平均偏离值 - 周期内已发生的熔断变化值
+  // 最终预测值 = 平均偏离值 - 周期内已发生的累计熔断变化值
   let predicted_change = avgVariance - intVar;
   let isFalling = predicted_change < 0;
 
-  // 3. 修正：修复熔断状态持久化的 Bug (不再受 current_eub 的历史影响)
+  // 3. 熔断风险评估指示器算法
   let risk_level = 'Low';
   if (currentCumulative >= 5.0) {
       risk_level = 'Alert';
@@ -46,7 +48,7 @@ const HeroBoard = ({ data, onExplore }) => {
 
   const formattedChange = Math.abs(predicted_change).toFixed(2);
   
-  // 基于风险等级本地映射静态文案，不依赖后端
+  // 基于风险等级本地映射静态文案
   let riskMessage = 'Market variance is currently low. Stable outlook.';
   if (risk_level === 'Alert') riskMessage = 'Critical volatility detected. Interrupter conditions met.';
   else if (risk_level === 'High') riskMessage = 'High variance detected. Elevated risk of adjustment.';
