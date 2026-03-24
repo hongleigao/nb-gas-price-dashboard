@@ -1,541 +1,241 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NB Gas Pulse // Fuel Intelligence</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NB Gas Pulse - 纽省油价预测</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#05070a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --bg-color: #05070a;
-            --surface-bg: #0d1117;
-            --text-main: #ffffff;
-            --text-sub: #6e7681;
-            --accent-blue: #00d1ff;
-            --accent-green: #3fb950;
-            --accent-red: #f85149;
-            --border-color: #30363d;
-            --font-display: 'Playfair Display', serif;
-            --font-body: 'Outfit', sans-serif;
+            --bg: #0a0a0c;
+            --surface: #16161a;
+            --primary: #00ff88;
+            --danger: #ff4466;
+            --text: #e0e0e6;
+            --text-dim: #9090a0;
+            --border: #2a2a32;
         }
 
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
-            margin: 0; padding: 0; 
-            font-family: var(--font-body); 
-            background-color: var(--bg-color); 
-            color: var(--text-main);
-            -webkit-font-smoothing: antialiased;
+            margin: 0; background: var(--bg); color: var(--text); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.5; overflow-x: hidden;
         }
 
-        .status-dot {
-            display: inline-block; width: 6px; height: 6px; background: var(--accent-green); 
-            border-radius: 50%; margin-right: 8px; vertical-align: middle;
-            box-shadow: 0 0 8px var(--accent-green); animation: pulse 2s infinite;
+        .container { max-width: 500px; margin: 0 auto; padding: 20px; }
+
+        /* Header */
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .brand { font-weight: 800; font-size: 1.2rem; letter-spacing: -0.5px; color: var(--primary); }
+        .status-dot { width: 8px; height: 8px; background: var(--primary); border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: 0 0 10px var(--primary); }
+        .sync-time { font-size: 0.75rem; color: var(--text-dim); }
+
+        /* Hero Decision Area */
+        .hero { 
+            background: linear-gradient(145deg, var(--surface), var(--bg));
+            border: 1px solid var(--border); border-radius: 24px; padding: 30px;
+            text-align: center; margin-bottom: 20px; position: relative; overflow: hidden;
         }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        .prediction-label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 10px; }
+        .price-change { font-size: 4rem; font-weight: 900; line-height: 1; margin: 10px 0; font-variant-numeric: tabular-nums; }
+        .unit { font-size: 1.2rem; margin-left: 4px; vertical-align: middle; opacity: 0.6; }
+        
+        /* Pressure Gauge (市场压力表) */
+        .pressure-gauge { margin-top: 25px; padding-top: 20px; border-top: 1px border var(--border); }
+        .gauge-track { height: 6px; background: #222; border-radius: 3px; position: relative; margin: 15px 0; }
+        .gauge-fill { height: 100%; border-radius: 3px; position: absolute; transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
+        .gauge-labels { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; }
+        .impact-val { color: var(--text); font-weight: bold; margin-left: 4px; }
 
-        .top-bar {
-            border-bottom: 1px solid var(--border-color);
-            padding: 12px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            color: var(--text-sub);
-            background: rgba(5, 7, 10, 0.8);
-            backdrop-filter: blur(10px);
-            position: sticky; top: 0; z-index: 100;
+        /* Window Breakdown */
+        .section-title { font-size: 0.85rem; font-weight: 700; color: var(--text-dim); margin: 30px 0 15px 5px; text-transform: uppercase; letter-spacing: 1px; }
+        .window-list { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .window-day { 
+            background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+            padding: 12px 5px; text-align: center; transition: transform 0.2s;
         }
+        .day-name { font-size: 0.65rem; color: var(--text-dim); margin-bottom: 6px; }
+        .day-price { font-size: 0.85rem; font-weight: bold; }
+        .day-final { width: 4px; height: 4px; background: var(--primary); border-radius: 50%; margin: 6px auto 0; opacity: 0; }
+        .is-final .day-final { opacity: 1; }
 
-        .container { max-width: 1200px; margin: 40px auto; padding: 0 40px; }
-
-        header {
-            margin-bottom: 60px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            border-bottom: 2px solid var(--text-main);
-            padding-bottom: 20px;
+        /* Chart Area */
+        .chart-container { 
+            background: var(--surface); border: 1px solid var(--border); border-radius: 20px; 
+            padding: 15px; margin-top: 20px; min-height: 250px; position: relative;
         }
-
-        h1 { font-family: var(--font-display); font-size: 56px; margin: 0; font-weight: 700; line-height: 1; }
-
-        .market-status { text-align: right; }
-
-        .label {
-            font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em;
-            color: var(--text-sub); margin-bottom: 20px; display: block; font-weight: 600;
-        }
-
-        .grid-layout { display: grid; grid-template-columns: 1.5fr 1fr; gap: 40px; margin-bottom: 60px; }
-
-        .summary-card {
-            background: var(--surface-bg);
-            border: 1px solid var(--border-color);
-            padding: 40px;
-            position: relative;
-            overflow: hidden;
-            border-left: 4px solid var(--border-color);
-            transition: border-left-color 0.5s ease;
+        canvas { width: 100% !important; height: 250px !important; }
+        .chart-loading { 
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            background: var(--surface); border-radius: 20px; z-index: 10; font-size: 0.8rem; color: var(--text-dim);
         }
 
-        .summary-card.trend-up { border-left-color: var(--accent-red); }
-        .summary-card.trend-down { border-left-color: var(--accent-green); }
-        .summary-card.trend-stable { border-left-color: var(--accent-blue); }
-
-        .decision-badge {
-            display: inline-block; padding: 6px 16px; border: 1px solid currentColor;
-            font-size: 13px; font-weight: 700; margin-bottom: 30px;
-        }
-
-        .main-value { font-family: var(--font-display); font-size: 84px; font-weight: 800; margin: 0; line-height: 1; }
-
-        .metrics-panel { display: flex; flex-direction: column; gap: 20px; }
-
-        .price-beacon {
-            display: flex; flex-direction: column; gap: 10px; padding: 25px;
-            border: 1px solid var(--border-color);
-            background: linear-gradient(145deg, #0d1117 0%, #05070a 100%);
-        }
-
-        .price-item { display: flex; justify-content: space-between; align-items: baseline; }
-        .price-label { font-size: 11px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; }
-        .price-val-main { font-family: var(--font-display); font-size: 42px; font-weight: 700; color: var(--text-main); }
-        .price-val-sub { font-family: var(--font-body); font-size: 24px; font-weight: 500; color: var(--text-sub); }
-
-        .insight-hub {
-            display: flex; flex-direction: column; gap: 25px; padding: 25px;
-            background: var(--surface-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-        }
-
-        .attribution-viz { padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .attr-bar-container { height: 4px; background: rgba(255,255,255,0.05); margin: 12px 0; border-radius: 2px; }
-        .attr-bar-fill { height: 100%; border-radius: 2px; transition: width 1s; }
-        .driver-text { font-size: 13px; font-style: italic; color: var(--accent-blue); margin-top: 15px; }
-
-        .risk-gauge { width: 100%; height: 8px; background: rgba(255,255,255,0.05); margin: 20px 0; border-radius: 4px; overflow: hidden; position: relative; }
-        .risk-marker { height: 100%; width: 0%; transition: width 1s, background 1s; border-radius: 4px; }
-
-        .progress-container { height: 2px; background: rgba(255,255,255,0.1); margin-top: 15px; width: 100%; }
-        .progress-bar { height: 100%; background: var(--accent-blue); transition: width 1.5s ease-out; }
-
-        .pro-toggle {
-            background: none; border: 1px solid var(--border-color); color: var(--text-sub); padding: 8px 16px; font-size: 11px; 
-            text-transform: uppercase; cursor: pointer; transition: all 0.3s; margin-top: 20px;
-        }
-        .pro-toggle:hover { border-color: var(--accent-blue); color: var(--text-main); }
-
-        .pro-content { display: none; margin-top: 40px; animation: fadeIn 0.5s ease-out; }
-        .chart-section { background: var(--surface-bg); border: 1px solid var(--border-color); padding: 30px; }
-        #chart { width: 100%; height: 500px; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        footer {
-            border-top: 1px solid var(--border-color); padding: 40px 0 80px 0; font-size: 12px; color: var(--text-sub); line-height: 1.8;
-            display: grid; grid-template-columns: 1fr 1fr; gap: 40px;
-        }
-
-        @media (max-width: 992px) {
-            .grid-layout, footer { grid-template-columns: 1fr; }
-            h1 { font-size: 42px; }
-            .main-value { font-size: 64px; }
-            .container { padding: 0 20px; }
-        }
+        /* Utils */
+        .up { color: var(--danger); }
+        .down { color: var(--primary); }
+        .stable { color: var(--text-dim); }
+        
+        #debug-toggle { margin-top: 40px; font-size: 0.7rem; color: #333; text-align: center; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="top-bar">
-        <div><span class="status-dot"></span>LIVE DATA // <span id="sync-status">Updating...</span></div>
-        <div>New Brunswick, Canada // <span id="location-time">---</span></div>
-    </div>
-
     <div class="container">
         <header>
-            <h1>⛽ NB Gas Pulse</h1>
-            <div class="market-status">
-                <div class="label">Effective Since</div>
-                <div id="current-date" style="font-size: 14px; font-weight: 600; color: var(--accent-blue);">--</div>
+            <div class="brand">GAS PULSE <small style="font-weight: 400; font-size: 0.6rem; opacity: 0.5;">V6.0</small></div>
+            <div class="sync-info">
+                <span class="status-dot"></span>
+                <span class="sync-time" id="sync-time">SYNCING...</span>
             </div>
         </header>
 
-        <div id="skeleton-container" class="grid-layout">
-            <div class="summary-card" style="height: 500px; opacity: 0.3;"></div>
-            <div class="metrics-panel" style="height: 500px; opacity: 0.3;"></div>
-        </div>
-
-        <div id="real-content" style="display:none;">
-            <div class="grid-layout">
-                <!-- 1. 左侧：极简决策卡 -->
-                <section class="summary-card">
-                    <div id="decision-text" class="decision-badge">Analyzing Intelligence</div>
-                    <div class="label">Projected Variation (Next Fri)</div>
-                    <h2 id="pred-val" class="main-value">--</h2>
-                    
-                    <!-- Projected Calculation Debug -->
-                    <div id="debug-projected" style="display:none; margin-top: 10px; font-family: monospace; font-size: 9px; color: var(--text-sub); border-left: 2px solid var(--accent-blue); padding-left: 10px;">
-                        <div>FORMULA: <span id="debug-formula">--</span></div>
-                        <div>WINDOW AVG: <span id="debug-win-avg">--</span></div>
-                        <div>ACTIVE BASE: <span id="debug-active-base">--</span></div>
-                        <div>DATES: <span id="debug-dates-used" style="word-break: break-all;">--</span></div>
+        <main>
+            <section class="hero">
+                <div class="prediction-label">预计本周变动</div>
+                <div class="price-change" id="main-change">--<span class="unit">¢/L</span></div>
+                
+                <div class="pressure-gauge">
+                    <div class="gauge-labels">
+                        <span>原油影响 <span class="impact-val" id="impact-comm">--</span></span>
+                        <span>汇率影响 <span class="impact-val" id="impact-fx">--</span></span>
                     </div>
-
-                    <div class="risk-gauge">
-                        <div id="risk-fill" class="risk-marker"></div>
+                    <div class="gauge-track">
+                        <div id="gauge-bar" class="gauge-fill" style="width: 50%; left: 25%; background: var(--primary);"></div>
                     </div>
-                    <div id="risk-label" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-sub);">Interrupter Risk: Nominal</div>
-
-                    <div id="pred-direction" style="margin-top: 25px; font-weight: 400; font-size: 15px; line-height: 1.6; color: var(--text-sub);">--</div>
-                    
-                    <button class="pro-toggle" style="margin-top: 40px;" onclick="toggleProMode()">Institutional Details</button>
-                </section>
-
-                <!-- 2. 右侧：当前价格基准 -->
-                <aside class="metrics-panel">
-                    <div class="price-beacon">
-                        <div class="price-item">
-                            <span class="price-label">Current Pump Price (Est.)</span>
-                            <span id="pump-val" class="price-val-main">--</span>
-                        </div>
-                        <div class="price-item" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
-                            <span class="price-label">Current EUB Max Ceiling</span>
-                            <span id="nb-val" class="price-val-sub">--</span>
-                        </div>
-                        <div id="nb-delta" style="font-size: 12px; font-weight: 700; text-align: right; margin-top: 5px;">--</div>
-                    </div>
-                </aside>
-            </div>
-
-            <!-- 3. 隐藏层：全量专业分析 -->
-            <div id="pro-mode-content" class="pro-content">
-                <div class="grid-layout">
-                    <!-- A. 价格驱动力分析 -->
-                    <div class="insight-hub">
-                        <div class="attribution-viz">
-                            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 15px;">
-                                <div class="label" style="margin-bottom: 0; font-size: 10px;">Instant Market Drive (Spot vs. Base)</div>
-                                <div id="market-data-date" style="font-size: 9px; color: var(--text-sub); opacity: 0.8;">Data as of: --</div>
-                            </div>
-                            <div class="attr-item" style="font-size: 13px;">
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span style="color: var(--text-sub);">Global Market</span>
-                                    <span id="attr-comm" style="font-weight: 600;">--</span>
-                                </div>
-                                <div class="attr-bar-container"><div id="bar-comm" class="attr-bar-fill"></div></div>
-                            </div>
-                            <div class="attr-item" style="font-size: 13px; margin-top: 15px;">
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span style="color: var(--text-sub);">Currency (CAD)</span>
-                                    <span id="attr-fx" style="font-weight: 600;">--</span>
-                                </div>
-                                <div class="attr-bar-container"><div id="bar-fx" class="attr-bar-fill"></div></div>
-                            </div>
-                            <div id="driver-summary" class="driver-text" style="font-size: 11px; line-height: 1.4;">--</div>
-                            
-                            <!-- Debug Section -->
-                            <div id="debug-zone" style="display:none; margin-top: 15px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); font-family: monospace; font-size: 9px; color: var(--text-sub);">
-                                <div>REF SOURCE: <span id="debug-src">--</span></div>
-                                <div>RBOB: <span id="debug-rbob-ref">--</span> -> <span id="debug-rbob-cur">--</span></div>
-                                <div>FX: <span id="debug-fx-ref">--</span> -> <span id="debug-fx-cur">--</span></div>
-                                <div>BASE: <span id="debug-base">--</span></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- B. 5日计价窗口明细 -->
-                    <div class="insight-hub">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                            <div class="label" style="margin-bottom: 0; font-size: 10px;">Market Window (5-Day Avg)</div>
-                            <div id="base-reset-tag" style="display: none; font-size: 9px; font-weight: 700; color: var(--accent-red); border: 1px solid var(--accent-red); padding: 2px 6px; border-radius: 2px; letter-spacing: 1px;">BASE RESET</div>
-                        </div>
-                        <div id="last-reset-info" style="font-size: 10px; color: var(--text-sub); margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
-                            Base last reset on: <span id="reset-date" style="color: var(--accent-blue);">--</span>
-                        </div>
-                        <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
-                            <thead>
-                                <tr style="color: var(--text-sub); font-size: 9px; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                                    <th style="text-align: left; padding-bottom: 8px;">Date</th>
-                                    <th style="text-align: right; padding-bottom: 8px;">Market</th>
-                                    <th style="text-align: right; padding-bottom: 8px;">Dev.</th>
-                                </tr>
-                            </thead>
-                            <tbody id="breakdown-body">
-                                <!-- 动态填充 -->
-                            </tbody>
-                        </table>
-                        <div style="font-size: 9px; color: var(--text-sub); margin-top: 15px; text-transform: uppercase; letter-spacing: 0.5px;">
-                            * Deviation compared to current regulation base (tax included)
-                        </div>
-                    </div>
+                    <div style="font-size: 0.6rem; color: #444; margin-top: 10px;">市场压力平衡表 (相对于上周基准)</div>
                 </div>
+            </section>
 
-                <!-- C. 历史大趋势图 -->
-                <section class="chart-section" style="margin-top: 40px;">
-                    <div class="label">NB Max vs. NYMEX Benchmark Spread Trend</div>
-                    <div id="chart"></div>
-                </section>
-            </div>
+            <section>
+                <div class="section-title">5日计价窗口明细</div>
+                <div class="window-list" id="window-list">
+                    <!-- JS 填充 -->
+                    <div class="window-day"><div class="day-name">--</div><div class="day-price">--</div></div>
+                    <div class="window-day"><div class="day-name">--</div><div class="day-price">--</div></div>
+                    <div class="window-day"><div class="day-name">--</div><div class="day-price">--</div></div>
+                    <div class="window-day"><div class="day-name">--</div><div class="day-price">--</div></div>
+                    <div class="window-day"><div class="day-name">--</div><div class="day-price">--</div></div>
+                </div>
+            </section>
 
-            <footer>
-                <div>
-                    <div class="label">Data Source</div>
-                    <p>Aggregated from the New Brunswick Energy and Utilities Board (NB EUB) and international market benchmarks.</p>
-                    <p>&copy; 2026 NB Gas Pulse</p>
-                </div>
-                <div class="disclaimer">
-                    <div class="label">Legal Notice</div>
-                    Predictions are calculated using the 5-day market window methodology employed by provincial regulators. The NB EUB maintains final statutory authority over all maximum fuel pricing in New Brunswick.
-                </div>
-            </footer>
-        </div>
+            <section class="chart-container">
+                <div class="chart-loading" id="chart-loader">加载历史趋势中...</div>
+                <canvas id="historyChart"></canvas>
+            </section>
+        </main>
+
+        <div id="debug-toggle">DEBUG MODE OFF</div>
     </div>
 
     <script>
-        var myChart;
-        var chartData = null;
-        const API_ENDPOINT = 'https://nb-gas-pulse-api.honglei-gao.workers.dev/';
+        const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8787' : '';
 
-        function toggleProMode() {
-            const content = document.getElementById('pro-mode-content');
-            const btn = document.querySelector('.pro-toggle');
-            if (content.style.display === 'block') {
-                content.style.display = 'none';
-                btn.innerText = 'Institutional Details';
-            } else {
-                content.style.display = 'block';
-                btn.innerText = 'Collapse Details';
-                setTimeout(() => {
-                    initChart();
-                    if (myChart) myChart.resize();
-                }, 100);
+        async function init() {
+            // 1. 先加载最新预测 (核心数据)
+            await fetchLatest();
+            // 2. 异步加载图表 (耗时数据)
+            await fetchHistory();
+        }
+
+        async function fetchLatest() {
+            try {
+                const res = await fetch(`${API_BASE}/api/latest`);
+                const data = await res.json();
+                renderLatest(data);
+            } catch (e) {
+                document.getElementById('main-change').innerText = 'ERROR';
             }
         }
 
-        function animateValue(id, start, end, duration, suffix = "", showSymbol = false) {
-            const obj = document.getElementById(id);
-            if (!obj) return;
-            let startTimestamp = null;
-            const step = (timestamp) => {
-                if (!startTimestamp) startTimestamp = timestamp;
-                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                const current = (progress * (end - start) + start);
-                let sign = "";
-                if (showSymbol && current >= 0.05) sign = "+";
-                if (showSymbol && current <= -0.05) sign = ""; // Negative already has -
-                obj.innerText = (Math.abs(current) < 0.05 ? "0.0" : (sign + current.toFixed(1))) + suffix;
-                if (progress < 1) window.requestAnimationFrame(step);
-            };
-            window.requestAnimationFrame(step);
+        function renderLatest(data) {
+            const p = data.prediction;
+            const changeEl = document.getElementById('main-change');
+            
+            // 1. 主预测值
+            const sign = p.change > 0 ? '+' : '';
+            changeEl.innerText = `${sign}${p.change.toFixed(1)}`;
+            changeEl.innerHTML += `<span class="unit">¢/L</span>`;
+            changeEl.className = `price-change ${p.direction}`;
+
+            // 2. 压力表
+            document.getElementById('sync-time').innerText = new Date(data.metadata.last_sync).toLocaleTimeString();
+            document.getElementById('impact-comm').innerText = `${p.spot_attribution.commodity > 0 ? '+' : ''}${p.spot_attribution.commodity}¢`;
+            document.getElementById('impact-fx').innerText = `${p.spot_attribution.fx > 0 ? '+' : ''}${p.spot_attribution.fx}¢`;
+            
+            // 压力表逻辑：计算原油占总影响的比例
+            const totalAbs = Math.abs(p.spot_attribution.commodity) + Math.abs(p.spot_attribution.fx);
+            const commRatio = totalAbs > 0 ? (Math.abs(p.spot_attribution.commodity) / totalAbs) * 100 : 50;
+            const bar = document.getElementById('gauge-bar');
+            bar.style.width = `${commRatio}%`;
+            bar.style.background = p.spot_attribution.commodity > 0 ? 'var(--danger)' : 'var(--primary)';
+
+            // 3. 窗口列表
+            const list = document.getElementById('window-list');
+            list.innerHTML = p.window.breakdown.map(d => `
+                <div class="window-day ${d.is_final ? 'is-final' : ''}">
+                    <div class="day-name">${d.day}</div>
+                    <div class="day-price">${d.raw_market ? d.raw_market.toFixed(1) : '--'}</div>
+                    <div class="day-final"></div>
+                </div>
+            `).join('');
         }
 
-        function initChart() {
-            if (!chartData || !document.getElementById('chart')) return;
-            if (!myChart) myChart = echarts.init(document.getElementById('chart'), 'dark');
-            const markPoints = [];
-            const nb_prices = chartData.nb_prices || [];
-            for (let i = 1; i < nb_prices.length; i++) {
-                if (nb_prices[i] !== nb_prices[i-1]) {
-                    markPoints.push({ coord: [i, nb_prices[i]], symbolSize: 6, itemStyle: { color: '#f85149' } });
-                }
+        async function fetchHistory() {
+            try {
+                const res = await fetch(`${API_BASE}/api/history`);
+                const data = await res.json();
+                renderChart(data);
+                document.getElementById('chart-loader').style.display = 'none';
+            } catch (e) {
+                document.getElementById('chart-loader').innerText = '图表加载失败';
             }
-            myChart.setOption({
-                backgroundColor: 'transparent',
-                tooltip: { trigger: 'axis', backgroundColor: '#0d1117', borderColor: '#30363d', textStyle: { color: '#ffffff' } },
-                legend: { bottom: '0%', textStyle: { color: '#6e7681' } },
-                grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
-                dataZoom: [{ type: 'inside', start: 85, end: 100 }, { start: 85, end: 100, bottom: 40 }],
-                xAxis: { type: 'category', data: chartData.dates || [], axisLine: { lineStyle: { color: '#30363d' } } },
-                yAxis: [{ type: 'value', scale: true, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } } }],
-                series: [
-                    { name: 'NB Price', type: 'line', step: 'end', data: nb_prices, color: '#f85149', lineStyle: { width: 2 }, markPoint: { symbol: 'circle', data: markPoints } },
-                    { name: 'NYMEX RBOB', type: 'line', smooth: true, data: chartData.nymex_prices || [], color: '#00d1ff', lineStyle: { width: 2 } }
-                ]
+        }
+
+        function renderChart(data) {
+            const ctx = document.getElementById('historyChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.dates,
+                    datasets: [
+                        {
+                            label: 'NB 官方价格',
+                            data: data.nb_prices,
+                            borderColor: '#00ff88',
+                            borderWidth: 3,
+                            stepped: true,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'NYMEX 市场基准',
+                            data: data.nymex_prices,
+                            borderColor: 'rgba(255, 255, 255, 0.15)',
+                            borderWidth: 1.5,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    scales: {
+                        y: { 
+                            grid: { color: '#222' },
+                            ticks: { color: '#666', font: { size: 10 } }
+                        },
+                        x: { 
+                            grid: { display: false },
+                            ticks: { color: '#666', font: { size: 10 }, maxRotation: 0 }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
             });
         }
 
-        fetch(API_ENDPOINT)
-            .then(res => res.json())
-            .then(data => {
-                chartData = data;
-                document.getElementById('skeleton-container').style.display = 'none';
-                document.getElementById('real-content').style.display = 'block';
-                if (data.metadata) {
-                    const m = data.metadata;
-                    const now_nb = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Moncton"}));
-                    document.getElementById('current-date').innerText = m.nb_last_date;
-                    document.getElementById('market-data-date').innerText = `Market Date: ${m.market_data_last_date}`;
-                    animateValue("nb-val", 0, m.current_nb_price, 1000, " ¢", false);
-                    animateValue("pump-val", 0, m.current_nb_price - 5.5, 1000, " ¢", false);
-                    document.getElementById('nb-delta').innerHTML = m.nb_delta > 0 ? `<span style="color:var(--accent-red)">+${m.nb_delta.toFixed(1)}</span>` : (m.nb_delta < 0 ? `<span style="color:var(--accent-green)">${m.nb_delta.toFixed(1)}</span>` : `STABLE`);
-                    
-                    const p = m.prediction || {};
-                    const win = p.window || {};
-                    const breakdownBody = document.getElementById('breakdown-body');
-                    const baseResetTag = document.getElementById('base-reset-tag');
-                    const resetDateEl = document.getElementById('reset-date');
-                    
-                    breakdownBody.innerHTML = '';
-                    resetDateEl.innerText = m.last_interrupter_date || m.nb_last_date;
-                    let hasInterrupter = false;
-
-                    if (win.breakdown) {
-                        win.breakdown.forEach(item => {
-                            const row = document.createElement('tr');
-                            row.style.borderBottom = '1px solid rgba(255,255,255,0.03)';
-                            
-                            let rawHtml = item.raw_market === null ? '--' : `${item.raw_market.toFixed(1)} ¢`;
-                            let diffHtml = item.diff === null ? '<span style="color:var(--text-sub); font-size:11px;">PENDING</span>' : `<span style="color:${item.diff > 0 ? 'var(--accent-red)' : 'var(--accent-green)'}; font-weight:600;">${item.diff > 0 ? '+' : ''}${item.diff.toFixed(1)} ¢</span>`;
-                            
-                            row.innerHTML = `
-                                <td style="padding:10px 0; color:var(--text-sub);">${item.day} (${item.date})</td>
-                                <td style="padding:10px 0; text-align:right; font-family: monospace; color: var(--accent-blue);">${rawHtml}</td>
-                                <td style="padding:10px 0; text-align:right;">${diffHtml}</td>
-                            `;
-                            breakdownBody.appendChild(row);
-                        });
-                    }
-                    if (hasInterrupter) baseResetTag.style.display = 'block';
-
-                    const attr = p.spot_attribution || { commodity: 0, fx: 0 };
-                    document.getElementById('attr-comm').innerText = (attr.commodity > 0 ? "+" : "") + attr.commodity.toFixed(2) + " ¢";
-                    document.getElementById('attr-fx').innerText = (attr.fx > 0 ? "+" : "") + attr.fx.toFixed(2) + " ¢";
-                    const barComm = document.getElementById('bar-comm');
-                    const barFx = document.getElementById('bar-fx');
-                    barComm.style.width = Math.min((Math.abs(attr.commodity) / 5.0) * 100, 100) + "%";
-                    barComm.style.background = attr.commodity > 0 ? "var(--accent-red)" : "var(--accent-green)";
-                    barFx.style.width = Math.min((Math.abs(attr.fx) / 5.0) * 100, 100) + "%";
-                    barFx.style.background = attr.fx > 0 ? "var(--accent-red)" : "var(--accent-green)";
-                    let summary = "";
-                    if (Math.abs(attr.commodity) < 0.01 && Math.abs(attr.fx) < 0.01) {
-                        summary = "Market conditions remain synchronized with the current baseline.";
-                    } else {
-                        summary = `Current spot deviation is <b>${(attr.commodity + attr.fx).toFixed(2)}¢</b> (pre-tax). `;
-                        summary += `Note: Projection differs due to 5-day window smoothing.`;
-                    }
-                    document.getElementById('driver-summary').innerHTML = summary;
-
-                    // 5. 调试信息填充
-                    if (m.debug) {
-                        // Instant Drive Debug
-                        document.getElementById('debug-src').innerText = m.debug.instant_drive.ref_source;
-                        document.getElementById('debug-rbob-ref').innerText = m.debug.instant_drive.ref_rbob;
-                        document.getElementById('debug-rbob-cur').innerText = m.debug.instant_drive.cur_rbob;
-                        document.getElementById('debug-fx-ref').innerText = m.debug.instant_drive.ref_fx;
-                        document.getElementById('debug-fx-cur').innerText = m.debug.instant_drive.cur_fx;
-                        document.getElementById('debug-base').innerText = m.debug.instant_drive.base_cad;
-                        
-                        // Projected Debug
-                        document.getElementById('debug-formula').innerText = m.debug.projected_vars.formula;
-                        document.getElementById('debug-win-avg').innerText = m.debug.projected_vars.window_avg;
-                        document.getElementById('debug-active-base').innerText = m.debug.projected_vars.base_cad;
-                        document.getElementById('debug-dates-used').innerText = m.debug.projected_vars.dates_used.join(', ');
-
-                        // 如果 URL 包含 ?debug=1 则显示调试区
-                        if (window.location.search.includes('debug=1')) {
-                            document.getElementById('debug-zone').style.display = 'block';
-                            document.getElementById('debug-projected').style.display = 'block';
-                        }
-                    }
-
-                    // 6. 熔断风险与决策结论
-                    animateValue("pred-val", 0, parseFloat(p.change), 1200, " ¢", true);
-                    const decisionEl = document.getElementById('decision-text');
-                    const summaryCard = document.querySelector('.summary-card');
-                    const predDirEl = document.getElementById('pred-direction');
-                    const riskLabel = document.getElementById('risk-label');
-                    
-                    const futurePump = (m.current_nb_price + p.change - 5.5).toFixed(1);
-                    const absChange = Math.abs(p.change).toFixed(1);
-
-                    // 计算目标日期
-                    const targetFri = new Date(now_nb);
-                    let daysToFri = (5 - now_nb.getDay() + 7) % 7;
-                    if (daysToFri === 0) daysToFri = 7;
-                    targetFri.setDate(now_nb.getDate() + daysToFri);
-                    const fullDateRef = `${daysToFri > 4 ? "next Friday" : "this Friday"} (${targetFri.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
-
-                    summaryCard.classList.remove('trend-up', 'trend-down', 'trend-stable');
-
-                    // A. 优先级最高：熔断预警逻辑 (排除静默期)
-                    if (p.risk_level === 'red' && !p.is_blackout) {
-                        if (p.interrupter_type === 'hike') {
-                            decisionEl.innerText = "CRITICAL: EMERGENCY HIKE RISK";
-                            decisionEl.style.color = "var(--accent-red)";
-                            predDirEl.innerHTML = `Market benchmark has surged beyond the ±6¢ threshold. Regular gas may <b>rise instantly</b>. Fill your tank <b>immediately</b>.`;
-                            summaryCard.classList.add('trend-up');
-                        } else {
-                            decisionEl.innerText = "NOTICE: EMERGENCY DROP EXPECTED";
-                            decisionEl.style.color = "var(--accent-green)";
-                            predDirEl.innerHTML = `Market benchmark has plummeted. An <b>emergency price drop</b> is highly likely before Friday. Defer fueling to save.`;
-                            summaryCard.classList.add('trend-down');
-                        }
-                    } 
-                    // B. 常规调价逻辑 (包含静默期处理)
-                    else {
-                        if (p.direction === 'up') {
-                            decisionEl.innerText = "ADVISORY: BUY BEFORE FRIDAY";
-                            decisionEl.style.color = "var(--accent-red)";
-                            predDirEl.innerHTML = `Forecast indicates Regular gas will rise ⬆️ <b>${absChange} ¢</b> to approx. <b>${futurePump} ¢</b> ${fullDateRef}. Fueling recommended.`;
-                            summaryCard.classList.add('trend-up');
-                        } else if (p.direction === 'down') {
-                            decisionEl.innerText = "ADVISORY: WAIT FOR FRIDAY";
-                            decisionEl.style.color = "var(--accent-green)";
-                            predDirEl.innerHTML = `Forecast indicates Regular gas will drop ⬇️ <b>${absChange} ¢</b> to approx. <b>${futurePump} ¢</b> ${fullDateRef}. Wait for Friday relief.`;
-                            summaryCard.classList.add('trend-down');
-                        } else {
-                            decisionEl.innerText = "MARKET NEUTRAL";
-                            decisionEl.style.color = "var(--text-sub)";
-                            predDirEl.innerHTML = `Market stable. Regular gas expected to remain near <b>${futurePump} ¢</b> for ${fullDateRef}.`;
-                            summaryCard.classList.add('trend-stable');
-                        }
-                    }
-
-                    // 风险仪展示：如果在静默期，强制转绿并提示
-                    const riskPct = Math.min((Math.abs(p.cumulative_drift) / 6.0) * 100, 100);
-                    const riskFill = document.getElementById('risk-fill');
-                    riskFill.style.width = riskPct + "%";
-
-                    if (p.is_blackout) {
-                        riskFill.style.background = "var(--text-sub)";
-                        riskLabel.innerText = "Interrupter Risk: BLACKOUT WINDOW";
-                        riskLabel.style.color = "var(--text-sub)";
-                    } else {
-                        if (p.risk_level === 'red') {
-                            riskFill.style.background = "var(--accent-red)";
-                            riskLabel.innerText = `Interrupter Risk: CRITICAL (${p.cumulative_drift > 0 ? '+' : ''}${p.cumulative_drift}¢ drift)`;
-                            riskLabel.style.color = "var(--accent-red)";
-                        } else if (p.risk_level === 'yellow') {
-                            riskFill.style.background = "#fbbf24";
-                            riskLabel.innerText = `Interrupter Risk: ELEVATED (${p.cumulative_drift > 0 ? '+' : ''}${p.cumulative_drift}¢ drift)`;
-                            riskLabel.style.color = "#fbbf24";
-                        } else {
-                            riskFill.style.background = "var(--accent-green)";
-                            riskLabel.innerText = "Interrupter Risk: NOMINAL";
-                            riskLabel.style.color = "var(--accent-green)";
-                        }
-                    }
-                    const lastSync = new Date(m.last_sync);
-                    const formattedTime = lastSync.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                    const formattedDate = lastSync.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                    document.getElementById("sync-status").innerText = `Synchronized at ${formattedTime}`;
-                    document.getElementById("location-time").innerText = formattedDate;
-                }
-            })
-            .catch(err => {
-                document.getElementById('skeleton-container').innerHTML = "<p>Data synchronization failure.</p>";
-                console.error(err);
-            });
-        window.onresize = () => myChart && myChart.resize();
+        init();
     </script>
 </body>
 </html>
