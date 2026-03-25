@@ -119,6 +119,7 @@ const HistoryChart = () => {
       xAxis: {
         type: 'category',
         data: xAxisDates,
+        boundaryGap: false, // 架构师修复：消除两端留白，强制数据点与刻度线严格对齐
         axisLine: { lineStyle: { color: '#e7e8e9' } }
       },
       yAxis: [
