@@ -12,11 +12,10 @@ const CycleDetails = ({ onBack, data }) => {
   const marketDays = market_cycle || [];
   
   // --- 逻辑优化：自动推算 5 日周期的所有日期 ---
-  // 我们基于 market_cycle 的第一天（周四）来推算整个周期的 5 个法定工作日
   const getCycleDates = () => {
     if (marketDays.length === 0) return [];
-    const firstDay = new Date(marketDays[0].date + 'T12:00:00'); // 避免时区偏移
-    const offsets = [0, 1, 4, 5, 6]; // 周四开始的偏离值：Thu(0), Fri(1), Mon(4), Tue(5), Wed(6)
+    const firstDay = new Date(marketDays[0].date + 'T12:00:00'); 
+    const offsets = [0, 1, 4, 5, 6]; 
     
     return offsets.map(offset => {
       const d = new Date(firstDay);
@@ -27,11 +26,9 @@ const CycleDetails = ({ onBack, data }) => {
 
   const cycleDates = getCycleDates();
   
-  // 准备 Timeline 事件
   let sumPostTaxVariance = 0;
   let countForAvg = 0;
 
-  // 映射 5 日数据
   const timelineEvents = cycleDates.map((dateStr, idx) => {
     const marketEntry = marketDays.find(d => d.date === dateStr);
     
@@ -53,7 +50,6 @@ const CycleDetails = ({ onBack, data }) => {
         isPending: false
       };
     } else {
-      // 尚未收盘的数据点
       return {
         type: 'market',
         date: dateStr,
@@ -63,16 +59,19 @@ const CycleDetails = ({ onBack, data }) => {
     }
   });
 
-  // 加入熔断事件
+  // 处理熔断历史：如果 API 返回了完整的 market_cycle 但没有带入所有历史熔断，我们至少显示当前生效的
   if (current_eub?.is_interrupter === 1 && current_eub?.effective_date) {
-    timelineEvents.push({
-      type: 'interrupter',
-      date: current_eub.effective_date,
-      variance: current_eub.interrupter_variance || 0
-    });
+    // 检查是否已经在 timeline 中（避免重复）
+    const exists = timelineEvents.some(e => e.type === 'interrupter' && e.date === current_eub.effective_date);
+    if (!exists) {
+        timelineEvents.push({
+            type: 'interrupter',
+            date: current_eub.effective_date,
+            variance: current_eub.interrupter_variance || 0
+        });
+    }
   }
 
-  // 排序：按日期升序，若日期相同，熔断排在市场数据后面
   timelineEvents.sort((a, b) => {
     if (a.date !== b.date) return a.date.localeCompare(b.date);
     return a.type === 'interrupter' ? 1 : -1;
@@ -102,10 +101,10 @@ const CycleDetails = ({ onBack, data }) => {
         <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/20 shadow-sm">
             <h3 className="text-xs font-bold text-outline-variant uppercase tracking-wider mb-4">Post-Tax Calculation</h3>
             <div className="font-mono text-sm md:text-base text-on-surface bg-surface-container-low p-4 rounded-lg overflow-x-auto whitespace-nowrap">
-                {avgPostTaxVariance.toFixed(2)}c (Avg) - ({intVar.toFixed(2)}c) = <span className="font-bold text-primary">{finalStr} ¢</span>
+                {avgPostTaxVariance.toFixed(2)}c (Avg) - ({intVar.toFixed(2)}c <span className="text-[10px] text-outline-variant">Total Int.</span>) = <span className="font-bold text-primary">{finalStr} ¢</span>
             </div>
             <p className="text-[11px] text-on-surface-variant mt-3 text-secondary">
-                * Formula: (Avg of {countForAvg} days variance) - (Active interrupter variance)
+                * Formula: (Avg of {countForAvg} days market variance) - (Total interrupter adjustment in this cycle)
             </p>
         </div>
       </section>
@@ -146,7 +145,6 @@ const CycleDetails = ({ onBack, data }) => {
                );
             }
 
-            // 渲染市场数据（包括 Pending 状态）
             return (
               <div key={`mkt-${event.date}-${idx}`} className={`group flex items-center justify-between p-5 rounded-xl border transition-all ${event.isPending ? 'bg-slate-50 border-dashed border-slate-200 opacity-60' : 'bg-surface-container-lowest border-transparent hover:translate-x-1'}`}>
                 <div className="flex items-center gap-5">
