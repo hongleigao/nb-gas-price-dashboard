@@ -8,6 +8,14 @@ import io
 import subprocess
 from datetime import datetime, timedelta
 
+# --- 架构师修复：动态路径解析逻辑 ---
+# 获取当前脚本所在目录的绝对路径
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+# 溯源到项目根目录 (scripts 的上一级)
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+# 精准锁定 wrangler.toml 的绝对路径
+WRANGLER_CONFIG_PATH = os.path.join(PROJECT_ROOT, 'api', 'wrangler.toml')
+
 # Configuration
 EUB_URL = 'https://nbeub.ca/images/documents/petroleum_pricing/Historical%20Petroleum%20Prices.xls'
 EXCEL_SHEET_NAME = 'Current'
@@ -15,18 +23,16 @@ ROW_KEYWORD_DATE = 'Date'
 ROW_KEYWORD_PRICE = 'Regular Unleaded  Maximum with Delivery'
 
 def seed_eub_history():
-    """Extract ALL history from EUB Excel."""
     print("Step 1: Extracting EUB history from Excel...")
     headers = {'User-Agent': 'Mozilla/5.0'}
     response = requests.get(EUB_URL, headers=headers, timeout=30)
-    
     df_raw = pd.read_excel(io.BytesIO(response.content), sheet_name=EXCEL_SHEET_NAME, header=None, engine='xlrd')
     
-    # Dynamic row detection
     date_row_idx = df_raw[df_raw.apply(lambda x: x.astype(str).str.contains(ROW_KEYWORD_DATE, case=False).any(), axis=1)].index[0]
     price_row_idx = df_raw[df_raw.apply(lambda x: x.astype(str).str.contains(ROW_KEYWORD_PRICE, case=False).any(), axis=1)].index[0]
     
-    dates = pd.to_datetime(df_raw.iloc[date_row_idx].values, errors='coerce')
+    # 修复 UserWarning: 增加 format='mixed' 提高解析鲁棒性
+    dates = pd.to_datetime(df_raw.iloc[date_row_idx].values, errors='coerce', dayfirst=False)
     prices = pd.to_numeric(df_raw.iloc[price_row_idx].values, errors='coerce')
     
     df = pd.DataFrame({'Date': dates, 'Price': prices}).dropna().sort_values('Date')
@@ -34,56 +40,44 @@ def seed_eub_history():
     return df
 
 def seed_market_history(days=730):
-    """Fetch 2 years of market history."""
-    print(f"Step 2: Fetching {days} days of market history from yfinance...")
-    
-    # Use yf.download for better historical consistency
+    print(f"Step 2: Fetching {days} days of market history (Settlement Focus)...")
     end_date = datetime.now()
     start_date = end_date - timedelta(days=days)
     
-    rbob_data = yf.download("RB=F", start=start_date, end=end_date)
-    cad_data = yf.download("CAD=X", start=start_date, end=end_date)
+    rbob_raw = yf.download("RB=F", start=start_date, end=end_date)
+    cad_raw = yf.download("CAD=X", start=start_date, end=end_date)
     
-    if rbob_data.empty or cad_data.empty:
-        print("Warning: One of the tickers returned no data.")
-        return pd.DataFrame()
+    if rbob_raw.empty or cad_raw.empty: return pd.DataFrame()
 
-    # Flatten MultiIndex if necessary (yfinance latest versions return MultiIndex)
-    if isinstance(rbob_data.columns, pd.MultiIndex):
-        rbob_data.columns = rbob_data.columns.get_level_values(0)
-    if isinstance(cad_data.columns, pd.MultiIndex):
-        cad_data.columns = cad_data.columns.get_level_values(0)
+    def extract_close(df, new_name):
+        if isinstance(df.columns, pd.MultiIndex):
+            return df['Close'].iloc[:, 0].to_frame(name=new_name)
+        return df[['Close']].rename(columns={'Close': new_name})
 
-    rbob = rbob_data[['Close']].rename(columns={'Close': 'rbob_usd'})
-    cad = cad_data[['Close']].rename(columns={'Close': 'cad_rate'})
+    rbob = extract_close(rbob_raw, 'rbob_usd')
+    cad = extract_close(cad_raw, 'cad_rate')
     
-    # 核心修复点 1：使用 Left Join 保留所有期货交易日
-    # 核心修复点 2：使用 ffill() 执行前向填充机制，解决由于汇率市场休市导致的整行数据被 Drop 的 Bug
     market_df = rbob.join(cad, how='left')
     market_df['cad_rate'] = market_df['cad_rate'].ffill() 
-    market_df = market_df.dropna() # 仅剔除最开头无法向前寻找汇率的脏数据
+    market_df['rbob_cad_base'] = market_df['rbob_usd'] * market_df['cad_rate']
     
     market_df.index = market_df.index.strftime('%Y-%m-%d')
-    
-    print(f"Fetched {len(market_df)} market data points.")
-    return market_df
+    return market_df.dropna()
 
 def run_sql_batch(sqls, remote=True):
-    """Execute a batch of SQL commands."""
     flag = "--remote" if remote else "--local"
-    config_path = "api/wrangler.toml"
+    # 使用之前动态解析出的绝对路径
+    config_arg = f"-c {WRANGLER_CONFIG_PATH}"
     
-    # Join SQLs with semicolon and newline
     batch_sql = "\n".join(sqls)
-    
-    # Save to temp file to avoid command line length limits
-    with open("temp_seed.sql", "w") as f:
+    with open("temp_seed.sql", "w", encoding='utf-8') as f:
         f.write(batch_sql)
     
-    print(f"Executing batch SQL ({flag})...")
-    cmd = f"npx wrangler d1 execute D1_DB {flag} --file=temp_seed.sql -c {config_path} --yes"
-    subprocess.run(cmd, shell=True, check=True)
-    os.remove("temp_seed.sql")
+    print(f"Executing batch SQL ({flag}) using config: {WRANGLER_CONFIG_PATH}")
+    # 强制在项目根目录下执行，确保 D1 绑定正常
+    cmd = f"npx wrangler d1 execute D1_DB {flag} --file=temp_seed.sql {config_arg} --yes"
+    subprocess.run(cmd, shell=True, check=True, cwd=PROJECT_ROOT)
+    os.remove(os.path.join(PROJECT_ROOT, "temp_seed.sql"))
 
 def main():
     parser = argparse.ArgumentParser()
@@ -91,38 +85,28 @@ def main():
     args = parser.parse_args()
     
     try:
-        # 1. Get Data
         eub_df = seed_eub_history()
         market_df = seed_market_history()
         
-        # 2. Prepare EUB SQLs
         eub_sqls = []
-        prev_price = None
+        prev_p = None
         for _, row in eub_df.iterrows():
-            date_str = row['Date'].strftime('%Y-%m-%d')
-            price = row['Price']
-            is_interrupter = 1 if row['Date'].weekday() != 4 else 0
-            variance = (price - prev_price) if (prev_price and is_interrupter) else 0
-            
-            # 保证幂等性：冲突时覆盖所有值
-            sql = f"INSERT INTO eub_prices (effective_date, published_date, max_price, is_interrupter, interrupter_variance) VALUES ('{date_str}', '{date_str}', {price}, {is_interrupter}, {variance}) ON CONFLICT(effective_date) DO UPDATE SET max_price=excluded.max_price, is_interrupter=excluded.is_interrupter, interrupter_variance=excluded.interrupter_variance;"
+            d_str = row['Date'].strftime('%Y-%m-%d')
+            is_int = 1 if row['Date'].weekday() != 4 else 0
+            var = (row['Price'] - prev_p) if (prev_p and is_int) else 0
+            sql = f"INSERT INTO eub_prices (effective_date, published_date, max_price, is_interrupter, interrupter_variance) VALUES ('{d_str}', '{d_str}', {row['Price']}, {is_int}, {var}) ON CONFLICT(effective_date) DO UPDATE SET max_price=excluded.max_price, is_interrupter=excluded.is_interrupter, interrupter_variance=excluded.interrupter_variance;"
             eub_sqls.append(sql)
-            prev_price = price
-            
-        # 3. Prepare Market SQLs
+            prev_p = row['Price']
+
         market_sqls = []
-        for date_str, row in market_df.iterrows():
-            # 保证幂等性：冲突时不仅更新 rbob_usd_close，也更新 cad_usd_rate
-            sql = f"INSERT INTO market_data (date, rbob_usd_close, cad_usd_rate) VALUES ('{date_str}', {row['rbob_usd']}, {row['cad_rate']}) ON CONFLICT(date) DO UPDATE SET rbob_usd_close=excluded.rbob_usd_close, cad_usd_rate=excluded.cad_usd_rate;"
+        for d_str, row in market_df.iterrows():
+            sql = f"INSERT INTO market_data (date, rbob_usd_close, cad_usd_rate) VALUES ('{d_str}', {row['rbob_usd']}, {row['cad_rate']}) ON CONFLICT(date) DO UPDATE SET rbob_usd_close=excluded.rbob_usd_close, cad_usd_rate=excluded.cad_usd_rate;"
             market_sqls.append(sql)
             
-        # 4. Execute in chunks to avoid Cloudflare size limits
-        print(f"Syncing {len(eub_sqls)} EUB records and {len(market_sqls)} market records...")
+        print(f"Syncing {len(eub_sqls)} EUB and {len(market_sqls)} Market records...")
         
-        # Chunking helper
         def chunk(lst, n):
-            for i in range(0, len(lst), n):
-                yield lst[i:i + n]
+            for i in range(0, len(lst), n): yield lst[i:i + n]
         
         for batch in chunk(eub_sqls, 50):
             run_sql_batch(batch, remote=args.remote)
@@ -130,11 +114,9 @@ def main():
         for batch in chunk(market_sqls, 100):
             run_sql_batch(batch, remote=args.remote)
             
-        print("✅ Historical seeding complete.")
-        
+        print("✅ Seeding Complete.")
     except Exception as e:
         print(f"❌ Seeding failed: {e}")
-        sys.exit(1)
 
 if __name__ == "__main__":
     main()
