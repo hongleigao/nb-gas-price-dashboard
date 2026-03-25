@@ -8,11 +8,12 @@ function App() {
   const [showCycleDetails, setShowCycleDetails] = useState(false);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false); // 新增分享状态
 
   useEffect(() => {
     const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      ? 'http://127.0.0.1:8787'
-      : 'https://nb-gas-pulse-api.honglei-gao.workers.dev'; // 默认 Cloudflare Worker 地址
+      ? '[http://127.0.0.1:8787](http://127.0.0.1:8787)'
+      : '[https://nb-gas-pulse-api.honglei-gao.workers.dev](https://nb-gas-pulse-api.honglei-gao.workers.dev)';
 
     fetch(`${API_BASE}/api/v1/cycle/current`)
       .then(res => res.json())
@@ -20,6 +21,35 @@ function App() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  const handleShare = async () => {
+    const shareData = {
+      title: 'NB Gas Guru',
+      text: 'Check out the latest gas price forecast and market trends for New Brunswick!',
+      url: window.location.href
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return; 
+      } catch (e) {
+      }
+    }
+
+    const textArea = document.createElement("textarea");
+    textArea.value = window.location.href;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000); 
+    } catch (err) {
+      console.error('Copy failed', err);
+    }
+    document.body.removeChild(textArea);
+  };
 
   if (loading) return <div className="flex items-center justify-center h-screen font-headline font-bold text-primary">Loading NB Gas Guru...</div>;
 
@@ -29,9 +59,18 @@ function App() {
         <div className="flex items-center gap-3">
           <span className="text-blue-900 font-manrope font-extrabold tracking-tight text-xl">NB Gas Guru</span>
         </div>
-        <div className="flex items-center gap-4">
-          <button className="material-symbols-outlined text-slate-500 p-2">notifications</button>
-          <button className="material-symbols-outlined text-slate-500 p-2">account_circle</button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-1.5 bg-white border border-slate-200 shadow-sm text-slate-600 px-3 py-1.5 rounded-full hover:bg-slate-50 active:scale-95 transition-all"
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              {copied ? 'check' : 'ios_share'}
+            </span>
+            <span className="text-xs font-bold uppercase tracking-wider">
+              {copied ? 'Copied!' : 'Share'}
+            </span>
+          </button>
         </div>
       </header>
 
