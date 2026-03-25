@@ -4,64 +4,62 @@ const HeroBoard = ({ data, onExplore }) => {
   const payload = data?.data || {};
   const { current_eub, benchmark_price, market_cycle, interrupter_total } = payload;
   
-  // --- 汇率/单位转换：加元/加仑 转换为 加分/升 ---
   const GAL_TO_LITER = 3.7854;
-  const benchmark_price_cl = benchmark_price ? (benchmark_price / GAL_TO_LITER) * 100 : 0;
+  const HST_RATE = 1.15; // NB省 15% HST
+  const benchmark_price_cl_pretax = benchmark_price ? (benchmark_price / GAL_TO_LITER) * 100 : 0;
   
-  // 1. 前端计算市区预估价 (最高限价 - 5.5)
   const pump_estimated = current_eub ? (current_eub.max_price - 5.5).toFixed(1) : '...';
   
-  // 2. 计算 5日均值 与 最终预测值
   const validDays = market_cycle || [];
   const n = validDays.length;
-  let avgVariance = 0;
-
-  if (n > 0 && benchmark_price_cl) {
+  
+  // 1. 【核心引擎】全部使用“税前(Pre-Tax)”计算平均偏离值
+  let avgPreTaxVariance = 0;
+  if (n > 0 && benchmark_price_cl_pretax) {
     const sum = validDays.reduce((acc, d) => {
-        const absolute_price_cl = (d.absolute_price / GAL_TO_LITER) * 100;
-        return acc + (absolute_price_cl - benchmark_price_cl);
+        const absolute_price_cl_pretax = (d.absolute_price / GAL_TO_LITER) * 100;
+        return acc + (absolute_price_cl_pretax - benchmark_price_cl_pretax);
     }, 0);
-    avgVariance = sum / n;
+    avgPreTaxVariance = sum / n;
   }
 
-  // 获取周期内已发生的累计熔断变化值
-  const intVar = interrupter_total !== undefined 
+  // 2. 【核心引擎】获取官方熔断值，并剥离 HST 还原为“税前”真实变动
+  const rawIntVar = interrupter_total !== undefined 
       ? interrupter_total 
       : ((current_eub?.is_interrupter === 1) ? (current_eub.interrupter_variance || 0) : 0);
+  const intVarPreTax = rawIntVar / HST_RATE;
   
-  // 最终预测值 = 平均偏离值 - 周期内已发生的累计熔断变化值
-  let predicted_change = avgVariance - intVar;
-  let isFalling = predicted_change < 0;
-
-  // 3. 架构师重构：严格执行 6.2 节的风险评估指示器算法
-  let risk_level = 'Low';
+  // 3. 【核心引擎】税前最终预测值
+  const predicted_change_preTax = avgPreTaxVariance - intVarPreTax;
   
-  // A. 提取“残余差值” (代表触发二次熔断的累计风险)
-  const current_risk_variance = Math.abs(predicted_change);
-  
-  // B. 提取“单日波幅” (预防单日极端暴跌/暴涨 6.0c)
-  let max_daily_variance = 0;
+  // 4. 【核心引擎】计算税前单日最大波幅
+  let max_daily_variance_preTax = 0;
   if (n >= 2) {
       const today = (validDays[n-1].absolute_price / GAL_TO_LITER) * 100;
       const yesterday = (validDays[n-2].absolute_price / GAL_TO_LITER) * 100;
-      max_daily_variance = Math.abs(today - yesterday);
-  } else if (n === 1 && benchmark_price_cl) {
+      max_daily_variance_preTax = Math.abs(today - yesterday);
+  } else if (n === 1 && benchmark_price_cl_pretax) {
       const today = (validDays[0].absolute_price / GAL_TO_LITER) * 100;
-      max_daily_variance = Math.abs(today - benchmark_price_cl);
+      max_daily_variance_preTax = Math.abs(today - benchmark_price_cl_pretax);
   }
 
-  // C. 综合评判规则落地
-  if (current_risk_variance >= 5.0 || max_daily_variance >= 6.0) {
+  // 5. ⭐️ 风险评估：严格基于“税前”底层数据与法规阈值 (5.0 & 6.0) 进行比对！
+  let risk_level = 'Low';
+  const current_risk_variance_preTax = Math.abs(predicted_change_preTax);
+  
+  if (current_risk_variance_preTax >= 5.0 || max_daily_variance_preTax >= 6.0) {
       risk_level = 'Alert';
-  } else if (current_risk_variance >= 4.0) {
+  } else if (current_risk_variance_preTax >= 4.0) {
       risk_level = 'High';
-  } else if (current_risk_variance >= 3.0) {
+  } else if (current_risk_variance_preTax >= 3.0) {
       risk_level = 'Medium';
   }
 
-  const formattedChange = Math.abs(predicted_change).toFixed(2);
+  // 6. 【UI展示】将最终预测结果转化为含税价 (Post-Tax)，给大众用户看
+  const predicted_change_postTax = predicted_change_preTax * HST_RATE;
+  let isFalling = predicted_change_postTax < 0;
+  const formattedChange = Math.abs(predicted_change_postTax).toFixed(2);
   
-  // 基于风险等级本地映射静态文案
   let riskMessage = 'Market variance is currently low. Stable outlook.';
   if (risk_level === 'Alert') riskMessage = 'Critical volatility detected. Interrupter conditions met.';
   else if (risk_level === 'High') riskMessage = 'High variance detected. Elevated risk of adjustment.';
@@ -69,7 +67,6 @@ const HeroBoard = ({ data, onExplore }) => {
 
   return (
     <div className="space-y-6">
-      {/* Hero Section */}
       <section className="relative overflow-hidden rounded-3xl bg-primary-container p-8 shadow-sm">
         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "24px 24px" }}></div>
         <div className="relative z-10">
@@ -79,6 +76,7 @@ const HeroBoard = ({ data, onExplore }) => {
               <h1 className="font-headline font-extrabold text-4xl text-white tracking-tight">
                 {isFalling ? '-' : '+'}{formattedChange}c
               </h1>
+              <span className="text-white/80 text-xs font-medium mt-1 block">≈ retail impact incl. HST</span>
             </div>
             <div className="bg-secondary/20 backdrop-blur-md rounded-full px-4 py-1.5 flex items-center gap-2 border border-secondary/30">
               <span className="material-symbols-outlined text-secondary-fixed text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -97,11 +95,10 @@ const HeroBoard = ({ data, onExplore }) => {
         </div>
       </section>
 
-      {/* Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-surface-container-lowest p-6 rounded-3xl flex flex-col justify-between">
           <div>
-            <span className="font-label text-xs font-semibold uppercase tracking-wider text-on-surface-variant block mb-4">Current Pump Price (Est.)</span>
+            <span className="font-label text-xs font-semibold uppercase tracking-wider text-on-surface-variant block mb-4">Estimated Pump Price</span>
             <div className="flex items-baseline gap-2">
               <span className="font-headline font-bold text-5xl text-primary">{pump_estimated}</span>
               <span className="font-headline font-bold text-xl text-on-surface-variant">c/L</span>
@@ -127,7 +124,7 @@ const HeroBoard = ({ data, onExplore }) => {
                 {risk_level}
               </div>
             </div>
-            {/* 4级状态条 */}
+            {/* 状态指示条 */}
             <div className="flex gap-1.5 h-2">
               <div className={`flex-1 rounded-full ${['Low', 'Medium', 'High', 'Alert'].includes(risk_level) ? 'bg-secondary' : 'bg-surface-container-high'}`}></div>
               <div className={`flex-1 rounded-full ${['Medium', 'High', 'Alert'].includes(risk_level) ? 'bg-tertiary-fixed' : 'bg-surface-container-high'}`}></div>
