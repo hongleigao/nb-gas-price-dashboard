@@ -1,10 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as echarts from 'echarts';
 
+// 工具函数：生成严格连续的本地日历数组 (避免时区跳跃)
+const generateDateRange = (startDateStr, endDateStr) => {
+  const dates = [];
+  let [sy, sm, sd] = startDateStr.split('-').map(Number);
+  let [ey, em, ed] = endDateStr.split('-').map(Number);
+  
+  // 使用 UTC 进行循环运算，防止夏令时导致的跨天 Bug
+  let current = new Date(Date.UTC(sy, sm - 1, sd));
+  const end = new Date(Date.UTC(ey, em - 1, ed));
+
+  while (current <= end) {
+    dates.push(current.toISOString().split('T')[0]);
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+  return dates;
+};
+
 const HistoryChart = () => {
   const chartRef = useRef(null);
   const [data, setData] = useState(null);
-  // 已按产品经理要求：将默认视图切换为 30 天，避免 90 天数据过于拥挤
   const [days, setDays] = useState(30); 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -27,7 +43,7 @@ const HistoryChart = () => {
       });
   }, [days]);
 
-  // 渲染图表
+  // 核心渲染逻辑：全日历填充与 LOCF 算法
   useEffect(() => {
     if (!data || !data.data || !chartRef.current) return;
 
@@ -37,29 +53,46 @@ const HistoryChart = () => {
     }
     
     const payload = data.data;
+    const meta = data.meta;
     const eubData = payload.eub_history || [];
     const marketData = payload.market_history || [];
-    
-    // 提取所有日期并排序 (后端现在统一输出为 date 字段)
-    const allDates = Array.from(new Set([
-      ...eubData.map(d => d.date || d.effective_date),
-      ...marketData.map(d => d.date)
-    ])).sort();
-
-    let lastEub = null;
-    let lastMarket = null;
     const GAL_TO_LITER = 3.7854;
 
-    const mergedData = allDates.map(date => {
-       const eubMatch = eubData.find(d => (d.date || d.effective_date) === date);
-       if (eubMatch) lastEub = eubMatch.max_price;
+    // 1. 将数据倒序排列（从最老的时间开始推演）
+    const eubAsc = [...eubData].reverse();
+    const marketAsc = [...marketData].reverse();
+
+    // 2. 确定时间窗口的严格左右边界
+    // API 已经通过 subquery 保证了 eubAsc[0] 可能是 30 天之前的上一次定价
+    const startDate = meta.start_date; 
+    // 图表终点以有市场数据的最后一天，或今天为准
+    const endDate = marketAsc.length > 0 ? marketAsc[marketAsc.length - 1].date : new Date().toISOString().split('T')[0];
+
+    // 3. 生成没有一天断档的全日历数组
+    const fullDateRange = generateDateRange(startDate, endDate);
+
+    // 4. LOCF 状态保持器
+    let currentEub = null;
+    let currentMarket = null;
+
+    // 前置寻找：如果窗口开始前有官方定价，先继承下来（得益于后端卓越的 subquery）
+    const initialEub = eubAsc.find(d => (d.date || d.effective_date) <= startDate);
+    if (initialEub) currentEub = initialEub.max_price;
+
+    // 5. 拉链式遍历：填充每一天的价格
+    const mergedData = fullDateRange.map(date => {
+       // 如果今天有官方新定价，更新它
+       const eToday = eubAsc.find(d => (d.date || d.effective_date) === date);
+       if (eToday) currentEub = eToday.max_price;
        
-       const marketMatch = marketData.find(d => d.date === date);
-       if (marketMatch) lastMarket = (marketMatch.rbob_cad_base / GAL_TO_LITER) * 100;
+       // 如果今天市场开盘有新价格，更新它
+       const mToday = marketAsc.find(d => d.date === date);
+       if (mToday) currentMarket = (mToday.rbob_cad_base / GAL_TO_LITER) * 100;
        
-       return { date, eubPrice: lastEub, marketPrice: lastMarket };
+       return { date, eubPrice: currentEub, marketPrice: currentMarket };
     });
 
+    // 拆解渲染序列
     const xAxisDates = mergedData.map(d => d.date);
     const eubPrices = mergedData.map(d => d.eubPrice === null ? undefined : d.eubPrice);
     const marketPrices = mergedData.map(d => d.marketPrice === null ? undefined : d.marketPrice);
@@ -111,6 +144,7 @@ const HistoryChart = () => {
           type: 'line',
           step: 'end',
           data: eubPrices,
+          showSymbol: false, // UI 优化：关闭官方线上的圆点
           itemStyle: { color: '#00236f' },
           lineStyle: { width: 3 }
         },
@@ -120,6 +154,7 @@ const HistoryChart = () => {
           yAxisIndex: 1,
           smooth: true,
           data: marketPrices,
+          showSymbol: false, // UI 优化：关闭市场线上的密集圆点，变专业
           itemStyle: { color: '#059669' },
           areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [

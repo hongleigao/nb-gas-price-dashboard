@@ -11,23 +11,20 @@ const HeroBoard = ({ data, onExplore }) => {
   // 1. 前端计算市区预估价 (最高限价 - 5.5)
   const pump_estimated = current_eub ? (current_eub.max_price - 5.5).toFixed(1) : '...';
   
-  // 2. 计算 5日均值减去熔断 的算法
+  // 2. 计算 5日均值 与 最终预测值
   const validDays = market_cycle || [];
   const n = validDays.length;
   let avgVariance = 0;
-  let currentCumulative = 0;
 
   if (n > 0 && benchmark_price_cl) {
     const sum = validDays.reduce((acc, d) => {
-        // 转换每一天的绝对价为 加分/升
         const absolute_price_cl = (d.absolute_price / GAL_TO_LITER) * 100;
         return acc + (absolute_price_cl - benchmark_price_cl);
     }, 0);
     avgVariance = sum / n;
-    currentCumulative = Math.abs(avgVariance);
   }
 
-  // 优先使用 API 新增的多次熔断累加值 (interrupter_total)
+  // 获取周期内已发生的累计熔断变化值
   const intVar = interrupter_total !== undefined 
       ? interrupter_total 
       : ((current_eub?.is_interrupter === 1) ? (current_eub.interrupter_variance || 0) : 0);
@@ -36,13 +33,29 @@ const HeroBoard = ({ data, onExplore }) => {
   let predicted_change = avgVariance - intVar;
   let isFalling = predicted_change < 0;
 
-  // 3. 熔断风险评估指示器算法
+  // 3. 架构师重构：严格执行 6.2 节的风险评估指示器算法
   let risk_level = 'Low';
-  if (currentCumulative >= 5.0) {
+  
+  // A. 提取“残余差值” (代表触发二次熔断的累计风险)
+  const current_risk_variance = Math.abs(predicted_change);
+  
+  // B. 提取“单日波幅” (预防单日极端暴跌/暴涨 6.0c)
+  let max_daily_variance = 0;
+  if (n >= 2) {
+      const today = (validDays[n-1].absolute_price / GAL_TO_LITER) * 100;
+      const yesterday = (validDays[n-2].absolute_price / GAL_TO_LITER) * 100;
+      max_daily_variance = Math.abs(today - yesterday);
+  } else if (n === 1 && benchmark_price_cl) {
+      const today = (validDays[0].absolute_price / GAL_TO_LITER) * 100;
+      max_daily_variance = Math.abs(today - benchmark_price_cl);
+  }
+
+  // C. 综合评判规则落地
+  if (current_risk_variance >= 5.0 || max_daily_variance >= 6.0) {
       risk_level = 'Alert';
-  } else if (currentCumulative >= 4.0) {
+  } else if (current_risk_variance >= 4.0) {
       risk_level = 'High';
-  } else if (currentCumulative >= 3.0) {
+  } else if (current_risk_variance >= 3.0) {
       risk_level = 'Medium';
   }
 
@@ -88,7 +101,7 @@ const HeroBoard = ({ data, onExplore }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-surface-container-lowest p-6 rounded-3xl flex flex-col justify-between">
           <div>
-            <span className="font-label text-xs font-semibold uppercase tracking-wider text-on-surface-variant block mb-4">Estimated Pump Price</span>
+            <span className="font-label text-xs font-semibold uppercase tracking-wider text-on-surface-variant block mb-4">Current Pump Price (Est.)</span>
             <div className="flex items-baseline gap-2">
               <span className="font-headline font-bold text-5xl text-primary">{pump_estimated}</span>
               <span className="font-headline font-bold text-xl text-on-surface-variant">c/L</span>
