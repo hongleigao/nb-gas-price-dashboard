@@ -4,7 +4,8 @@ import * as echarts from 'echarts';
 const HistoryChart = () => {
   const chartRef = useRef(null);
   const [data, setData] = useState(null);
-  const [days, setDays] = useState(90); // 新增：控制查询天数的状态
+  // 已按产品经理要求：将默认视图切换为 30 天，避免 90 天数据过于拥挤
+  const [days, setDays] = useState(30); 
   const [isLoading, setIsLoading] = useState(true);
 
   // 动态请求数据
@@ -24,13 +25,12 @@ const HistoryChart = () => {
         console.error(err);
         setIsLoading(false);
       });
-  }, [days]); // 当 days 变化时，自动重新请求
+  }, [days]);
 
   // 渲染图表
   useEffect(() => {
     if (!data || !data.data || !chartRef.current) return;
 
-    // 复用已有的图表实例，避免重复创建内存泄漏
     let chart = echarts.getInstanceByDom(chartRef.current);
     if (!chart) {
       chart = echarts.init(chartRef.current);
@@ -40,9 +40,9 @@ const HistoryChart = () => {
     const eubData = payload.eub_history || [];
     const marketData = payload.market_history || [];
     
-    // 实施 6.3 节：数据拉链式合并与前向填充算法 (LOCF)
+    // 提取所有日期并排序 (后端现在统一输出为 date 字段)
     const allDates = Array.from(new Set([
-      ...eubData.map(d => d.effective_date),
+      ...eubData.map(d => d.date || d.effective_date),
       ...marketData.map(d => d.date)
     ])).sort();
 
@@ -51,7 +51,7 @@ const HistoryChart = () => {
     const GAL_TO_LITER = 3.7854;
 
     const mergedData = allDates.map(date => {
-       const eubMatch = eubData.find(d => d.effective_date === date);
+       const eubMatch = eubData.find(d => (d.date || d.effective_date) === date);
        if (eubMatch) lastEub = eubMatch.max_price;
        
        const marketMatch = marketData.find(d => d.date === date);
@@ -131,7 +131,6 @@ const HistoryChart = () => {
       ]
     };
 
-    // 设置为 true 表示强制替换旧图表数据（防止切换 1年 变 30天 时 X轴残留）
     chart.setOption(option, true);
 
     const handleResize = () => chart.resize();
@@ -139,7 +138,6 @@ const HistoryChart = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [data]);
 
-  // 生成顶部标签文字
   const getSubTitle = () => {
     if (days === 30) return "30 Day Volatility Snapshot";
     if (days === 365) return "1 Year Macro Trend Analysis";
@@ -156,7 +154,6 @@ const HistoryChart = () => {
         </div>
       </section>
 
-      {/* 架构师新增：交互式时间范围切换器 (Segmented Control) */}
       <div className="bg-surface-container-low p-1.5 rounded-xl w-max flex items-center shadow-inner mb-2">
         {[
           { label: '30D', value: 30 },

@@ -21,13 +21,13 @@ function App() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="flex items-center justify-center h-screen font-headline font-bold text-primary">Loading Fuel Architect...</div>;
+  if (loading) return <div className="flex items-center justify-center h-screen font-headline font-bold text-primary">Loading NB Gas Guru...</div>;
 
   return (
     <div className="min-h-screen pb-24">
       <header className="bg-slate-50 flex items-center justify-between w-full px-6 h-16 fixed top-0 z-50">
         <div className="flex items-center gap-3">
-          <span className="text-blue-900 font-manrope font-extrabold tracking-tight text-xl">Fuel Architect</span>
+          <span className="text-blue-900 font-manrope font-extrabold tracking-tight text-xl">NB Gas Guru</span>
         </div>
         <div className="flex items-center gap-4">
           <button className="material-symbols-outlined text-slate-500 p-2">notifications</button>
