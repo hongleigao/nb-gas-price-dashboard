@@ -18,11 +18,12 @@ const CycleDetails = ({ onBack, data }) => {
   });
   const sumStr = variances.join(' ');
   
-  // 优先读取 API 的周期内多次熔断累计值
-  const intVar = interrupter_total !== undefined 
-      ? interrupter_total 
-      : ((current_eub?.is_interrupter === 1) ? (current_eub.interrupter_variance || 0) : 0);
-  const intVarStr = intVar > 0 ? `+${intVar.toFixed(2)}` : intVar.toFixed(2);
+  // 核心逻辑：区分“最后一次熔断”和“周期内累计熔断”
+  const latestIntVar = current_eub?.interrupter_variance || 0;
+  const totalIntVar = interrupter_total || 0;
+  
+  // 判断是否需要显示“累计”信息 (对比保留两位小数后的数值)
+  const isMultipleInterrupters = Math.abs(totalIntVar.toFixed(2) - latestIntVar.toFixed(2)) > 0.01;
 
   let avgVariance = 0;
   if (n > 0) {
@@ -32,33 +33,31 @@ const CycleDetails = ({ onBack, data }) => {
       }, 0);
       avgVariance = sum / n;
   }
-  const finalPred = avgVariance - intVar;
+  const finalPred = avgVariance - totalIntVar;
   const finalStr = finalPred > 0 ? `+${finalPred.toFixed(2)}` : finalPred.toFixed(2);
 
-  // 2. 构建混合时间轴 (将市场日和熔断日融合排序)
+  // 2. 构建混合时间轴
   let timelineEvents = validDays.map((day, idx) => {
       const absolute_price_cl = (day.absolute_price / GAL_TO_LITER) * 100;
       const variance = absolute_price_cl - benchmark_price_cl;
       return {
           type: 'market',
           date: day.date,
-          dayIndex: idx + 1, // 记录是第几个交易日
+          dayIndex: idx + 1,
           absolute_price_cl,
           variance,
           isFalling: variance < 0
       };
   });
 
-  // 如果当前周期有触发熔断，将其作为特殊事件插入时间轴
   if (current_eub?.is_interrupter === 1 && current_eub?.effective_date) {
       timelineEvents.push({
           type: 'interrupter',
           date: current_eub.effective_date,
-          variance: current_eub.interrupter_variance || 0
+          variance: latestIntVar
       });
   }
 
-  // 按照日期字符串 (YYYY-MM-DD) 进行升序排列
   timelineEvents.sort((a, b) => a.date.localeCompare(b.date));
 
   return (
@@ -71,16 +70,36 @@ const CycleDetails = ({ onBack, data }) => {
       </div>
 
       <section className="space-y-4">
-        <h2 className="font-headline font-bold text-on-surface-variant tracking-tight text-sm uppercase px-2">Active Calculation Formula</h2>
+        <div className="flex items-center justify-between px-2">
+            <h2 className="font-headline font-bold text-on-surface-variant tracking-tight text-sm uppercase">Active Calculation Formula</h2>
+            {isMultipleInterrupters && (
+                <span className="bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase">Multiple Adjustments Applied</span>
+            )}
+        </div>
         
-        {/* 完全展示动态数学方程式的区块 */}
         <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/20 shadow-sm">
-            <h3 className="text-xs font-bold text-outline-variant uppercase tracking-wider mb-4">Calculation Breakdown</h3>
-            <div className="font-mono text-sm md:text-base text-on-surface bg-surface-container-low p-4 rounded-lg overflow-x-auto whitespace-nowrap">
-                ( {sumStr || '0.00'} ) / {n || 1} - ({intVarStr}) = <span className="font-bold text-primary">{finalStr} ¢</span>
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
+                <div>
+                   <h3 className="text-xs font-bold text-outline-variant uppercase tracking-wider mb-1">Calculation Breakdown</h3>
+                   <div className="font-mono text-lg text-on-surface bg-surface-container-low p-4 rounded-lg overflow-x-auto whitespace-nowrap">
+                        ( {sumStr || '0.00'} ) / {n || 1} - ({totalIntVar > 0 ? '+' : ''}{totalIntVar.toFixed(2)}) = <span className="font-bold text-primary">{finalStr} ¢</span>
+                    </div>
+                </div>
+                {isMultipleInterrupters && (
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 min-w-[180px]">
+                        <div className="flex justify-between text-[11px] mb-1">
+                            <span className="text-slate-500">Latest Interrupter:</span>
+                            <span className="font-bold text-slate-700">{latestIntVar > 0 ? '+' : ''}{latestIntVar.toFixed(2)}¢</span>
+                        </div>
+                        <div className="flex justify-between text-[11px]">
+                            <span className="text-slate-500">Cycle Cumulative:</span>
+                            <span className="font-bold text-primary">{totalIntVar > 0 ? '+' : ''}{totalIntVar.toFixed(2)}¢</span>
+                        </div>
+                    </div>
+                )}
             </div>
-            <p className="text-[11px] text-on-surface-variant mt-3">
-                * 5-day variance average ({n} actual closing days) - Interrupter variance applied in current cycle
+            <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                * The prediction is the 5-day variance average ({n} days tracked) minus the <b>cumulative</b> interrupter variance applied within this window.
             </p>
         </div>
       </section>
@@ -93,11 +112,9 @@ const CycleDetails = ({ onBack, data }) => {
         
         <div className="space-y-3">
           {timelineEvents.map((event, idx) => {
-            // 修复时区陷阱：手动拆分字符串生成本地日期，防止 UTC 偏移
             const [y, m, d] = event.date.split('-').map(Number);
             const localDate = new Date(y, m - 1, d);
             
-            // --- 渲染：熔断日特殊卡片 (红色警示) ---
             if (event.type === 'interrupter') {
                return (
                   <div key={`int-${event.date}`} className="group flex items-center justify-between p-5 bg-error/10 border border-error/20 rounded-xl hover:translate-x-1 transition-all">
@@ -107,8 +124,8 @@ const CycleDetails = ({ onBack, data }) => {
                         <span className="font-headline font-extrabold text-lg leading-tight">{localDate.getDate()}</span>
                       </div>
                       <div>
-                        <p className="font-headline font-bold text-error text-base">Interrupter Applied</p>
-                        <p className="text-xs font-medium text-error/80">Unscheduled Adjustment</p>
+                        <p className="font-headline font-bold text-error text-base">Latest Adjustment</p>
+                        <p className="text-xs font-medium text-error/80 italic">Most recent interrupter</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -123,7 +140,6 @@ const CycleDetails = ({ onBack, data }) => {
                );
             }
 
-            // --- 渲染：常规交易日卡片 ---
             const isLastMarket = event.dayIndex === n;
             return (
               <div key={`mkt-${event.date}`} className="group flex items-center justify-between p-5 bg-surface-container-lowest rounded-xl hover:translate-x-1 transition-all">
