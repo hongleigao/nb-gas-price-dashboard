@@ -1,22 +1,43 @@
 import React from 'react';
 
 const CycleDetails = ({ onBack, data }) => {
-  const payload = data?.data || {};
-  const { current_eub, market_cycle, benchmark_price, interrupter_total } = payload;
+  const payload = data?.data;
 
+  // ==========================================
+  // 1. 幽默空状态保护 (全英文 UI)
+  // ==========================================
+  if (!payload || !payload.current_eub || !payload.market_cycle) {
+    return (
+      <div className="space-y-8 pb-8">
+        <div className="flex items-center gap-4 mb-8">
+          <button onClick={onBack} className="text-blue-900 hover:bg-slate-200/50 p-2 rounded-full active:scale-95 transition-all">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+          <h1 className="text-blue-900 font-manrope font-bold text-lg">Cycle Analysis</h1>
+        </div>
+        <div className="flex flex-col items-center justify-center py-10 px-6 text-center space-y-4 bg-surface-container-lowest rounded-3xl border border-dashed border-outline-variant/30">
+          <span className="text-5xl drop-shadow-sm grayscale opacity-50">⛽</span>
+          <p className="text-on-surface-variant text-sm font-medium">
+            Our data pipeline is temporarily out of gas...<br/>Please return to the dashboard and try again.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // 2. 正常渲染逻辑
+  // ==========================================
+  const { current_eub, market_cycle, benchmark_price, interrupter_total } = payload;
   const GAL_TO_LITER = 3.7854;
   const HST_RATE = 1.15; 
-  
   const benchmark_price_cl_pretax = benchmark_price ? (benchmark_price / GAL_TO_LITER) * 100 : 0;
-
   const marketDays = market_cycle || [];
   
-  // --- 逻辑优化：自动推算 5 日周期的所有日期 ---
   const getCycleDates = () => {
     if (marketDays.length === 0) return [];
     const firstDay = new Date(marketDays[0].date + 'T12:00:00'); 
     const offsets = [0, 1, 4, 5, 6]; 
-    
     return offsets.map(offset => {
       const d = new Date(firstDay);
       d.setDate(firstDay.getDate() + offset);
@@ -31,15 +52,12 @@ const CycleDetails = ({ onBack, data }) => {
 
   const timelineEvents = cycleDates.map((dateStr, idx) => {
     const marketEntry = marketDays.find(d => d.date === dateStr);
-    
     if (marketEntry) {
       const absolute_price_cl_pretax = (marketEntry.absolute_price / GAL_TO_LITER) * 100;
       const preTaxVariance = absolute_price_cl_pretax - benchmark_price_cl_pretax;
       const postTaxVariance = preTaxVariance * HST_RATE;
-      
       sumPostTaxVariance += postTaxVariance;
       countForAvg++;
-
       return {
         type: 'market',
         date: dateStr,
@@ -59,9 +77,7 @@ const CycleDetails = ({ onBack, data }) => {
     }
   });
 
-  // 处理熔断历史：如果 API 返回了完整的 market_cycle 但没有带入所有历史熔断，我们至少显示当前生效的
   if (current_eub?.is_interrupter === 1 && current_eub?.effective_date) {
-    // 检查是否已经在 timeline 中（避免重复）
     const exists = timelineEvents.some(e => e.type === 'interrupter' && e.date === current_eub.effective_date);
     if (!exists) {
         timelineEvents.push({
@@ -77,11 +93,7 @@ const CycleDetails = ({ onBack, data }) => {
     return a.type === 'interrupter' ? 1 : -1;
   });
 
-  // 计算公式展示
-  const intVar = interrupter_total !== undefined 
-      ? interrupter_total 
-      : ((current_eub?.is_interrupter === 1) ? (current_eub.interrupter_variance || 0) : 0);
-  
+  const intVar = interrupter_total !== undefined ? interrupter_total : ((current_eub?.is_interrupter === 1) ? (current_eub.interrupter_variance || 0) : 0);
   const avgPostTaxVariance = countForAvg > 0 ? (sumPostTaxVariance / countForAvg) : 0;
   const finalPred = avgPostTaxVariance - intVar;
   const finalStr = finalPred > 0 ? `+${finalPred.toFixed(2)}` : finalPred.toFixed(2);
@@ -97,7 +109,6 @@ const CycleDetails = ({ onBack, data }) => {
 
       <section className="space-y-4">
         <h2 className="font-headline font-bold text-on-surface-variant tracking-tight text-sm uppercase px-2">Active Calculation Formula</h2>
-        
         <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/20 shadow-sm">
             <h3 className="text-xs font-bold text-outline-variant uppercase tracking-wider mb-4">Post-Tax Calculation</h3>
             <div className="font-mono text-sm md:text-base text-on-surface bg-surface-container-low p-4 rounded-lg overflow-x-auto whitespace-nowrap">
@@ -112,7 +123,7 @@ const CycleDetails = ({ onBack, data }) => {
       <section className="space-y-6">
         <div className="flex items-end justify-between px-2">
           <h2 className="font-headline font-bold text-on-surface-variant tracking-tight text-sm uppercase">5-Day Pricing Cycle</h2>
-          <span className="text-[10px] font-bold text-outline uppercase tracking-widest">Ordered: Thu-Wed</span>
+          <span className="text-[10px] font-bold text-outline uppercase tracking-widest">ORDERED: THU-WED</span>
         </div>
         
         <div className="space-y-3">
