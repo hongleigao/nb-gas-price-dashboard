@@ -5,56 +5,87 @@ const CycleDetails = ({ onBack, data }) => {
   const { current_eub, market_cycle, benchmark_price, interrupter_total } = payload;
 
   const GAL_TO_LITER = 3.7854;
-  const HST_RATE = 1.15; // NB省 15% HST
+  const HST_RATE = 1.15; 
   
-  // 1. 换算基准价为 CAD ¢/L (税前)
   const benchmark_price_cl_pretax = benchmark_price ? (benchmark_price / GAL_TO_LITER) * 100 : 0;
 
-  const validDays = market_cycle || [];
-  const n = validDays.length;
+  const marketDays = market_cycle || [];
   
-  // 2. 计算每天的“含税零售变动影响 (Pump Impact)”
+  // --- 逻辑优化：自动推算 5 日周期的所有日期 ---
+  // 我们基于 market_cycle 的第一天（周四）来推算整个周期的 5 个法定工作日
+  const getCycleDates = () => {
+    if (marketDays.length === 0) return [];
+    const firstDay = new Date(marketDays[0].date + 'T12:00:00'); // 避免时区偏移
+    const offsets = [0, 1, 4, 5, 6]; // 周四开始的偏离值：Thu(0), Fri(1), Mon(4), Tue(5), Wed(6)
+    
+    return offsets.map(offset => {
+      const d = new Date(firstDay);
+      d.setDate(firstDay.getDate() + offset);
+      return d.toISOString().split('T')[0];
+    });
+  };
+
+  const cycleDates = getCycleDates();
+  
+  // 准备 Timeline 事件
   let sumPostTaxVariance = 0;
-  const timelineEvents = validDays.map((day, idx) => {
-      const absolute_price_cl_pretax = (day.absolute_price / GAL_TO_LITER) * 100;
+  let countForAvg = 0;
+
+  // 映射 5 日数据
+  const timelineEvents = cycleDates.map((dateStr, idx) => {
+    const marketEntry = marketDays.find(d => d.date === dateStr);
+    
+    if (marketEntry) {
+      const absolute_price_cl_pretax = (marketEntry.absolute_price / GAL_TO_LITER) * 100;
       const preTaxVariance = absolute_price_cl_pretax - benchmark_price_cl_pretax;
-      const postTaxVariance = preTaxVariance * HST_RATE; // 乘以1.15，转化为用户感知的含税变动
+      const postTaxVariance = preTaxVariance * HST_RATE;
       
       sumPostTaxVariance += postTaxVariance;
-      
+      countForAvg++;
+
       return {
-          type: 'market',
-          date: day.date,
-          dayIndex: idx + 1,
-          absolute_price_cl_pretax,
-          postTaxVariance,
-          isFalling: postTaxVariance < 0
+        type: 'market',
+        date: dateStr,
+        dayIndex: idx + 1,
+        absolute_price_cl_pretax,
+        postTaxVariance,
+        isFalling: postTaxVariance < 0,
+        isPending: false
       };
+    } else {
+      // 尚未收盘的数据点
+      return {
+        type: 'market',
+        date: dateStr,
+        dayIndex: idx + 1,
+        isPending: true
+      };
+    }
   });
 
-  const variancesStr = timelineEvents.map(e => e.postTaxVariance > 0 ? `+${e.postTaxVariance.toFixed(2)}` : e.postTaxVariance.toFixed(2)).join(' ');
-  const sumStr = variancesStr;
-  
-  // 3. EUB 的熔断值本来就是含税的，展示时直接使用，无需再除以 1.15
+  // 加入熔断事件
+  if (current_eub?.is_interrupter === 1 && current_eub?.effective_date) {
+    timelineEvents.push({
+      type: 'interrupter',
+      date: current_eub.effective_date,
+      variance: current_eub.interrupter_variance || 0
+    });
+  }
+
+  // 排序：按日期升序，若日期相同，熔断排在市场数据后面
+  timelineEvents.sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return a.type === 'interrupter' ? 1 : -1;
+  });
+
+  // 计算公式展示
   const intVar = interrupter_total !== undefined 
       ? interrupter_total 
       : ((current_eub?.is_interrupter === 1) ? (current_eub.interrupter_variance || 0) : 0);
-  const intVarStr = intVar > 0 ? `+${intVar.toFixed(2)}` : intVar.toFixed(2);
-
-  // 4. 计算最终的含税预测值
-  const avgPostTaxVariance = n > 0 ? (sumPostTaxVariance / n) : 0;
+  
+  const avgPostTaxVariance = countForAvg > 0 ? (sumPostTaxVariance / countForAvg) : 0;
   const finalPred = avgPostTaxVariance - intVar;
   const finalStr = finalPred > 0 ? `+${finalPred.toFixed(2)}` : finalPred.toFixed(2);
-
-  if (current_eub?.is_interrupter === 1 && current_eub?.effective_date) {
-      timelineEvents.push({
-          type: 'interrupter',
-          date: current_eub.effective_date,
-          variance: current_eub.interrupter_variance || 0
-      });
-  }
-
-  timelineEvents.sort((a, b) => a.date.localeCompare(b.date));
 
   return (
     <div className="space-y-10 pb-8">
@@ -69,12 +100,12 @@ const CycleDetails = ({ onBack, data }) => {
         <h2 className="font-headline font-bold text-on-surface-variant tracking-tight text-sm uppercase px-2">Active Calculation Formula</h2>
         
         <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/20 shadow-sm">
-            <h3 className="text-xs font-bold text-outline-variant uppercase tracking-wider mb-4">Post-Tax Calculation Breakdown</h3>
+            <h3 className="text-xs font-bold text-outline-variant uppercase tracking-wider mb-4">Post-Tax Calculation</h3>
             <div className="font-mono text-sm md:text-base text-on-surface bg-surface-container-low p-4 rounded-lg overflow-x-auto whitespace-nowrap">
-                ( {sumStr || '0.00'} ) / {n || 1} - ({intVarStr}) = <span className="font-bold text-primary">{finalStr} ¢</span>
+                {avgPostTaxVariance.toFixed(2)}c (Avg) - ({intVar.toFixed(2)}c) = <span className="font-bold text-primary">{finalStr} ¢</span>
             </div>
             <p className="text-[11px] text-on-surface-variant mt-3 text-secondary">
-                * All daily variances are scaled by 15% HST to show the exact impact at the pump.
+                * Formula: (Avg of {countForAvg} days variance) - (Active interrupter variance)
             </p>
         </div>
       </section>
@@ -92,7 +123,7 @@ const CycleDetails = ({ onBack, data }) => {
             
             if (event.type === 'interrupter') {
                return (
-                  <div key={`int-${event.date}`} className="group flex items-center justify-between p-5 bg-error/10 border border-error/20 rounded-xl hover:translate-x-1 transition-all">
+                  <div key={`int-${event.date}-${idx}`} className="group flex items-center justify-between p-5 bg-error/10 border border-error/20 rounded-xl">
                     <div className="flex items-center gap-5">
                       <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-error text-white shadow-sm">
                         <span className="text-[10px] font-bold uppercase">{localDate.toLocaleDateString('en-US', { weekday: 'short' })}</span>
@@ -100,7 +131,7 @@ const CycleDetails = ({ onBack, data }) => {
                       </div>
                       <div>
                         <p className="font-headline font-bold text-error text-base">Latest Adjustment</p>
-                        <p className="text-xs font-medium text-error/80">Most recent interrupter</p>
+                        <p className="text-xs font-medium text-error/80">Scheduled or Unscheduled</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -115,31 +146,35 @@ const CycleDetails = ({ onBack, data }) => {
                );
             }
 
-            const isLastMarket = event.dayIndex === n;
+            // 渲染市场数据（包括 Pending 状态）
             return (
-              <div key={`mkt-${event.date}`} className="group flex items-center justify-between p-5 bg-surface-container-lowest rounded-xl hover:translate-x-1 transition-all">
+              <div key={`mkt-${event.date}-${idx}`} className={`group flex items-center justify-between p-5 rounded-xl border transition-all ${event.isPending ? 'bg-slate-50 border-dashed border-slate-200 opacity-60' : 'bg-surface-container-lowest border-transparent hover:translate-x-1'}`}>
                 <div className="flex items-center gap-5">
-                  <div className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl ${isLastMarket ? 'bg-primary' : 'bg-surface-container-low'}`}>
-                    <span className={`text-[10px] font-bold uppercase ${isLastMarket ? 'text-on-primary/70' : 'text-outline-variant'}`}>
+                  <div className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl ${event.isPending ? 'bg-slate-200' : 'bg-primary'}`}>
+                    <span className={`text-[10px] font-bold uppercase ${event.isPending ? 'text-slate-500' : 'text-on-primary/70'}`}>
                       {localDate.toLocaleDateString('en-US', { weekday: 'short' })}
                     </span>
-                    <span className={`font-headline font-extrabold text-lg leading-tight ${isLastMarket ? 'text-on-primary' : 'text-primary'}`}>
+                    <span className={`font-headline font-extrabold text-lg leading-tight ${event.isPending ? 'text-slate-500' : 'text-on-primary'}`}>
                       {localDate.getDate()}
                     </span>
                   </div>
                   <div>
-                    <p className="font-headline font-bold text-on-surface text-base">Day {event.dayIndex}</p>
-                    <p className="text-xs font-mono text-on-surface-variant">Base Close: {event.absolute_price_cl_pretax.toFixed(2)} ¢/L</p>
+                    <p className={`font-headline font-bold text-base ${event.isPending ? 'text-slate-400' : 'text-on-surface'}`}>Day {event.dayIndex}</p>
+                    <p className={`text-xs font-mono ${event.isPending ? 'text-slate-400 italic' : 'text-on-surface-variant'}`}>
+                      {event.isPending ? 'Market not closed' : `Market Close: ${event.absolute_price_cl_pretax.toFixed(2)} ¢/L`}
+                    </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className={`font-headline font-extrabold text-lg ${event.isFalling ? 'text-tertiary-fixed' : 'text-error'}`}>
-                    {event.postTaxVariance > 0 ? '+' : ''}{event.postTaxVariance.toFixed(2)}c
-                  </p>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${event.isFalling ? 'bg-tertiary-fixed/20 text-tertiary-fixed' : 'bg-error/20 text-error'}`}>
-                    Pump Impact
-                  </span>
-                </div>
+                {!event.isPending && (
+                  <div className="text-right">
+                    <p className={`font-headline font-extrabold text-lg ${event.isFalling ? 'text-tertiary-fixed' : 'text-error'}`}>
+                      {event.postTaxVariance > 0 ? '+' : ''}{event.postTaxVariance.toFixed(2)}c
+                    </p>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${event.isFalling ? 'bg-tertiary-fixed/20 text-tertiary-fixed' : 'bg-error/20 text-error'}`}>
+                      Pump Impact
+                    </span>
+                  </div>
+                )}
               </div>
             );
           })}
