@@ -1,58 +1,80 @@
-# Contributing to NB Gas Pulse
+# Contributing to NB Gas Pulse (v7.0)
 
-This guide explains how to maintain the system, update data, and modify the core logic.
+Welcome! This guide provides detailed instructions on how to set up, maintain, and contribute to the NB Gas Pulse project.
 
 ---
 
-## 1. Development Environment
-- **Python**: 3.10+
-- **Database**: Cloudflare D1
-- **API Runtime**: Cloudflare Workers (JavaScript)
+## 1. Project Structure
 
-### Installation
-```powershell
-pip install pandas yfinance requests openpyxl xlrd pytz
-```
+The project is divided into three main components:
 
-## 2. Managing Data (The Pusher)
-The system relies on daily synchronization between market benchmarks and the cloud database.
+- **`web/`**: The frontend application built with React, Vite, Tailwind CSS, and ECharts.
+- **`api/`**: The backend API running on Cloudflare Workers (JavaScript) with D1 Database.
+- **`scripts/`**: Python ETL (Extract, Transform, Load) scripts for market data processing.
+- **`database/`**: SQL schema definitions for the D1 database.
 
-### Initial Seeding (Run once)
-1. `python init_db.py`: Initializes the Cloudflare D1 schema.
-2. `python seed_eub_history.py`: Imports historical NB EUB regulatory data.
-3. `python seed_history.py`: Imports 2-year market benchmark history.
+## 2. Development Setup
 
-### Daily Maintenance
-`update_data.py` is executed automatically via GitHub Actions. To run manually:
-```powershell
-# Set credentials first
-$env:CLOUDFLARE_ACCOUNT_ID="..."
-$env:CLOUDFLARE_DATABASE_ID="..."
-$env:CLOUDFLARE_API_TOKEN="..."
-python update_data.py
-```
+### 2.1 Backend (API)
+The API is built using Cloudflare Workers and managed with Wrangler.
 
-## 3. Modifying Logic (The Brain)
-The core prediction logic resides in `worker.js`. 
-
-### Manual Update
-1. Modify `worker.js`.
-2. Copy content to Cloudflare Worker Dashboard.
-3. Deploy.
-
-### Automated Deployment (Wrangler)
 ```bash
-# Recommendation: Use Cloudflare Wrangler CLI
-npm install -g wrangler
-wrangler login
-wrangler deploy worker.js --name nb-gas-pulse-api
+cd api
+npm install
+# To run locally
+npm run dev
+# To deploy
+npm run deploy
 ```
 
-## 4. GitHub Actions Configuration
-Ensure the following Secrets are configured in your repository:
+### 2.2 Frontend (Web)
+The frontend is a modern React application.
+
+```bash
+cd web
+npm install
+# Start development server
+npm run dev
+# Build for production
+npm run build
+```
+
+### 2.3 Data ETL (Python Scripts)
+Python scripts are used to fetch market data and push it to the D1 database.
+
+- **Requirements**: Python 3.10+
+- **Installation**:
+  ```bash
+  pip install -r scripts/requirements.txt
+  ```
+
+## 3. Data Management
+
+### Initial Setup
+1. **Initialize Database**: Use `database/schema.sql` to set up your Cloudflare D1 database.
+2. **Seed History**: Run `python scripts/seed_history.py` to import historical market data.
+
+### Daily Updates
+The system uses `scripts/update_daily.py` to fetch the latest benchmarks.
+
+To run manually:
+```powershell
+$env:CLOUDFLARE_ACCOUNT_ID="your_id"
+$env:CLOUDFLARE_API_TOKEN="your_token"
+python scripts/update_daily.py --remote
+```
+
+## 4. Deployment & CI/CD
+
+The project uses **GitHub Actions** (`.github/workflows/main.yml`) for automated deployment:
+- **Data Pipeline**: Runs daily (08:00 and 22:30 UTC) to update the database.
+- **API Deployment**: Deploys the Cloudflare Worker upon successful data updates.
+- **Frontend Deployment**: Deploys the built web app to **GitHub Pages** (`gh-pages` branch).
+
+### Required GitHub Secrets:
 - `CLOUDFLARE_ACCOUNT_ID`
-- `CLOUDFLARE_DATABASE_ID`
 - `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_DATABASE_ID` (if not specified in wrangler.toml)
 
 ---
-*Maintained by NB Gas Pulse Engineering*
+Maintained by Jacky
