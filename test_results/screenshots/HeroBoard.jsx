@@ -85,44 +85,13 @@ const HeroBoard = ({ data, onExplore }) => {
 
   let lastAdjText = '';
   if (current_eub?.effective_date) {
-      const effDateStr = current_eub.effective_date;
-      const d = new Date(effDateStr + 'T12:00:00');
-      let displayDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
-      let prefix = 'LAST CHANGE:';
-
-      // 架构师修复：智能判断 Today / Yesterday / Tomorrow (严格基于 NB 所在的 Moncton 时区)
-      try {
-          const getMonctonDateStr = (offsetDays = 0) => {
-              const targetDate = new Date();
-              targetDate.setDate(targetDate.getDate() + offsetDays);
-              // 强制输出 YYYY-MM-DD 格式进行比对
-              return new Intl.DateTimeFormat('en-CA', { 
-                  timeZone: 'America/Moncton', 
-                  year: 'numeric', month: '2-digit', day: '2-digit' 
-              }).format(targetDate);
-          };
-
-          const todayStr = getMonctonDateStr(0);
-          const yesterdayStr = getMonctonDateStr(-1);
-          const tomorrowStr = getMonctonDateStr(1);
-
-          if (effDateStr === todayStr) {
-              displayDate = 'TODAY';
-          } else if (effDateStr === yesterdayStr) {
-              displayDate = 'YESTERDAY';
-          } else if (effDateStr === tomorrowStr) {
-              displayDate = 'TOMORROW';
-              prefix = 'EFFECTIVE:'; // 语义修正：如果生效时间在明天，说明是提前预告的常规调价
-          }
-      } catch (e) {
-          // 兼容极少数不支持 Intl API 的老旧浏览器，降级显示原始日期
-      }
-
+      const d = new Date(current_eub.effective_date + 'T12:00:00');
+      const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       if (current_eub.is_interrupter === 1) {
           const sign = current_eub.interrupter_variance > 0 ? '+' : '';
-          lastAdjText = `${prefix} ${displayDate} (INTERRUPTER ${sign}${current_eub.interrupter_variance}c)`;
+          lastAdjText = `LAST CHANGE: ${dateStr} (INTERRUPTER ${sign}${current_eub.interrupter_variance}c)`;
       } else {
-          lastAdjText = `${prefix} ${displayDate} (SET TO ${current_eub.max_price} ¢/L)`;
+          lastAdjText = `LAST CHANGE: ${dateStr} (SET TO ${current_eub.max_price} ¢/L)`;
       }
   }
 
@@ -173,10 +142,10 @@ const HeroBoard = ({ data, onExplore }) => {
 
   const getThemeClasses = (theme) => {
       switch(theme) {
-          case 'buy': return 'bg-rose-50 text-rose-700 border-rose-200'; // 涨价要买：用警示红
-          case 'wait': return 'bg-emerald-50 text-emerald-800 border-emerald-200'; // 降价可等：用安全绿
-          case 'alert': return 'bg-red-50 text-red-700 border-red-300'; // 极度危险：用正红
-          default: return 'bg-slate-50 text-slate-700 border-slate-200'; // 中立：用板岩灰（带点蓝色的高级灰）
+          case 'buy': return 'bg-error/10 text-error border-error/20'; 
+          case 'wait': return 'bg-tertiary-fixed/30 text-teal-800 border-tertiary-fixed'; 
+          case 'alert': return 'bg-orange-500/15 text-orange-700 border-orange-500/30';
+          default: return 'bg-surface-container-high text-on-surface-variant border-transparent';
       }
   };
 
@@ -209,7 +178,7 @@ const HeroBoard = ({ data, onExplore }) => {
           <div className="flex justify-between items-start mb-6">
             <div>
               {/* 动态显示的下一个生效时间 */}
-              <span className={`font-label text-[11px] font-semibold uppercase tracking-widest mb-2 block ${risk_level === 'Alert' ? 'text-orange-300' : 'text-slate-300'}`}>
+              <span className={`font-label text-[11px] font-semibold uppercase tracking-widest mb-2 block ${risk_level === 'Alert' ? 'text-orange-300' : 'text-on-primary-container'}`}>
                 {nextAdjDateText}
               </span>
               <h1 className="font-headline font-extrabold text-4xl text-white tracking-tight">
@@ -217,18 +186,18 @@ const HeroBoard = ({ data, onExplore }) => {
               </h1>
               <span className="text-white/80 text-xs font-medium mt-1 block">≈ retail impact incl. HST</span>
             </div>
-            <div className={`backdrop-blur-md rounded-full px-4 py-1.5 flex items-center gap-2 border ${isFalling ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-rose-500/20 border-rose-500/30'}`}>
-              <span className={`material-symbols-outlined text-sm ${isFalling ? 'text-emerald-300' : 'text-rose-300'}`} style={{ fontVariationSettings: "'FILL' 1" }}>
+            <div className="bg-secondary/20 backdrop-blur-md rounded-full px-4 py-1.5 flex items-center gap-2 border border-secondary/30">
+              <span className="material-symbols-outlined text-secondary-fixed text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
                 {isFalling ? 'trending_down' : 'trending_up'}
               </span>
-              <span className={`font-label font-bold text-xs uppercase tracking-wider ${isFalling ? 'text-emerald-300' : 'text-rose-300'}`}>
+              <span className="font-label font-bold text-secondary-fixed text-xs uppercase tracking-wider">
                 {isFalling ? 'FALLING' : 'RISING'}
               </span>
             </div>
           </div>
           <div className="flex items-center gap-4 mt-8">
             <div className="h-1 flex-1 bg-white/10 rounded-full overflow-hidden">
-              <div className={`h-full w-3/4 rounded-full ${isFalling ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
+              <div className="h-full bg-secondary-fixed w-3/4 rounded-full"></div>
             </div>
           </div>
         </div>
@@ -255,20 +224,20 @@ const HeroBoard = ({ data, onExplore }) => {
             <div className="flex items-center justify-between">
               <span className="font-label text-sm font-bold text-on-surface">Current Status</span>
               <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide
-                ${risk_level === 'Alert' ? 'bg-rose-600 text-white' : 
+                ${risk_level === 'Alert' ? 'bg-error text-error-container' : 
                   risk_level === 'High' ? 'bg-orange-500 text-white' : 
-                  risk_level === 'Medium' ? 'bg-amber-400 text-amber-900' : 
-                  'bg-emerald-600 text-white'}
+                  risk_level === 'Medium' ? 'bg-tertiary-fixed text-on-tertiary-fixed-variant' : 
+                  'bg-secondary text-on-secondary'}
               `}>
                 {risk_level}
               </div>
             </div>
             {/* 状态指示条 */}
             <div className="flex gap-1.5 h-2">
-              <div className={`flex-1 rounded-full ${['Low', 'Medium', 'High', 'Alert'].includes(risk_level) ? 'bg-emerald-500' : 'bg-slate-100'}`}></div>
-              <div className={`flex-1 rounded-full ${['Medium', 'High', 'Alert'].includes(risk_level) ? 'bg-amber-400' : 'bg-slate-100'}`}></div>
-              <div className={`flex-1 rounded-full ${['High', 'Alert'].includes(risk_level) ? 'bg-orange-500' : 'bg-slate-100'}`}></div>
-              <div className={`flex-1 rounded-full ${risk_level === 'Alert' ? 'bg-rose-600' : 'bg-slate-100'}`}></div>
+              <div className={`flex-1 rounded-full ${['Low', 'Medium', 'High', 'Alert'].includes(risk_level) ? 'bg-secondary' : 'bg-surface-container-high'}`}></div>
+              <div className={`flex-1 rounded-full ${['Medium', 'High', 'Alert'].includes(risk_level) ? 'bg-tertiary-fixed' : 'bg-surface-container-high'}`}></div>
+              <div className={`flex-1 rounded-full ${['High', 'Alert'].includes(risk_level) ? 'bg-orange-500' : 'bg-surface-container-high'}`}></div>
+              <div className={`flex-1 rounded-full ${risk_level === 'Alert' ? 'bg-error' : 'bg-surface-container-high'}`}></div>
             </div>
             <p className="text-xs text-on-surface-variant leading-relaxed mt-4">
               {risk_level === 'Alert' ? 'Critical volatility detected. Interrupter conditions met.' :
