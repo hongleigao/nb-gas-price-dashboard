@@ -2,8 +2,8 @@ name: NB Gas Pulse - Daily ETL
 
 on:
   schedule:
-    - cron: '30 2 * * 2-6'   # ADT 23:30 / AST 22:30 (每日收盘核心同步)
-    - cron: '30 11 * * 1-5'  # ADT 08:30 / AST 07:30 (早晨容灾兜底)
+    - cron: '30 2 * * *'   # ADT 23:30 / AST 22:30 (每日收盘核心同步)
+    - cron: '30 11 * * *'  # ADT 08:30 / AST 07:30 (早晨容灾兜底)
   workflow_dispatch:         # 保留手动触发按钮
 
 jobs:

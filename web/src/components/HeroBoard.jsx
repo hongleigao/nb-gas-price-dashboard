@@ -38,9 +38,12 @@ const HeroBoard = ({ data, onExplore }) => {
   const validDays = market_cycle || [];
   const n = validDays.length;
   
+  // 架构师防御：判定是否处于“数据空窗期”
+  const isTwilightZone = n === 0;
+  
   // 底层税前计算
   let avgPreTaxVariance = 0;
-  if (n > 0 && benchmark_price_cl_pretax) {
+  if (!isTwilightZone && benchmark_price_cl_pretax) {
     const sum = validDays.reduce((acc, d) => acc + (((d.absolute_price / GAL_TO_LITER) * 100) - benchmark_price_cl_pretax), 0);
     avgPreTaxVariance = sum / n;
   }
@@ -48,22 +51,29 @@ const HeroBoard = ({ data, onExplore }) => {
   const rawIntVar = interrupter_total !== undefined ? interrupter_total : ((current_eub?.is_interrupter === 1) ? (current_eub.interrupter_variance || 0) : 0);
   const intVarPreTax = rawIntVar / HST_RATE;
   
-  const predicted_change_preTax = avgPreTaxVariance - intVarPreTax;
+  // 架构师修复：如果是空窗期，强行将预测值归零，避免 0 - 熔断值 的致命计算错误
+  const predicted_change_preTax = isTwilightZone ? 0 : (avgPreTaxVariance - intVarPreTax);
   
-  // 架构师修复：严格比对“最新单日”与“基准价(Benchmark)”的偏差，不再使用“今天减昨天”
   let latest_daily_variance_preTax = 0;
-  if (n > 0 && benchmark_price_cl_pretax) {
+  if (!isTwilightZone && benchmark_price_cl_pretax) {
       const latest_absolute_preTax = (validDays[n-1].absolute_price / GAL_TO_LITER) * 100;
       latest_daily_variance_preTax = Math.abs(latest_absolute_preTax - benchmark_price_cl_pretax);
   }
 
-  // 风险定级逻辑：基于最终周期均值偏差，或者单日偏离基准价幅度
+  // 风险定级逻辑
   let risk_level = 'Low';
   const current_risk_variance_preTax = Math.abs(predicted_change_preTax);
   
-  if (current_risk_variance_preTax >= 5.0 || latest_daily_variance_preTax >= 6.0) risk_level = 'Alert';
-  else if (current_risk_variance_preTax >= 4.0) risk_level = 'High';
-  else if (current_risk_variance_preTax >= 3.0) risk_level = 'Medium';
+  // 架构师修复：如果是空窗期，强制无风险
+  if (isTwilightZone) {
+      risk_level = 'Low';
+  } else if (current_risk_variance_preTax >= 5.0 || latest_daily_variance_preTax >= 6.0) {
+      risk_level = 'Alert';
+  } else if (current_risk_variance_preTax >= 4.0) {
+      risk_level = 'High';
+  } else if (current_risk_variance_preTax >= 3.0) {
+      risk_level = 'Medium';
+  }
 
   const predicted_change_postTax = predicted_change_preTax * HST_RATE;
   let isFalling = predicted_change_postTax < 0;
@@ -134,8 +144,15 @@ const HeroBoard = ({ data, onExplore }) => {
   let recSubtitle = 'Prices are relatively stable. No major routine or emergency shifts expected.';
   let recIcon = 'local_gas_station';
 
+  // 架构师新增：最高优先级的“空窗期” UI 状态，优雅化解没有数据的尴尬
+  if (isTwilightZone) {
+      recTheme = 'neutral';
+      recTitle = 'Awaiting Market Data';
+      recSubtitle = 'A new pricing cycle has begun. Waiting for the first market close...';
+      recIcon = 'hourglass_empty';
+  }
   // Tier 1: 极度危险 (Alert)
-  if (risk_level === 'Alert') {
+  else if (risk_level === 'Alert') {
       recTheme = 'alert';
       recIcon = 'warning';
       if (isFalling) {

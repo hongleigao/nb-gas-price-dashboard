@@ -95,7 +95,9 @@ const CycleDetails = ({ onBack, data }) => {
 
   const intVar = interrupter_total !== undefined ? interrupter_total : ((current_eub?.is_interrupter === 1) ? (current_eub.interrupter_variance || 0) : 0);
   const avgPostTaxVariance = countForAvg > 0 ? (sumPostTaxVariance / countForAvg) : 0;
-  const finalPred = avgPostTaxVariance - intVar;
+  
+  // 架构师修复：如果没有有效的平均数据，让最终结果等于 0，避免 0 - 熔断值的错误
+  const finalPred = countForAvg === 0 ? 0 : (avgPostTaxVariance - intVar);
   const finalStr = finalPred > 0 ? `+${finalPred.toFixed(2)}` : finalPred.toFixed(2);
 
   return (
@@ -128,6 +130,7 @@ const CycleDetails = ({ onBack, data }) => {
         
         <div className="space-y-3">
           {timelineEvents.map((event, idx) => {
+            if (!event.date) return null; // 安全拦截
             const [y, m, d] = event.date.split('-').map(Number);
             const localDate = new Date(y, m - 1, d);
             
