@@ -16,11 +16,19 @@ function getMonctonCycleDates() {
     
     // 核心逻辑：寻找最近的“上一个星期四 (Thu = 4)”作为本周期的起点
     let daysSinceThu = dayOfWeek - 4;
-    if (daysSinceThu < 0) daysSinceThu += 7;
+    
+    // 架构师修复：将 < 0 改为 <= 0。
+    // 这样在周四当天(daysSinceThu === 0)，系统会往回退 7 天找上周四，
+    // 确保周四全天都在展示上一周期的终盘预测，直到周五跨日！
+    if (daysSinceThu <= 0) daysSinceThu += 7;
 
     // 当前周期的起点 (本周四/上周四)
     const currentStart = new Date(todayDate);
     currentStart.setUTCDate(todayDate.getUTCDate() - daysSinceThu);
+    
+    // 架构师修复：严格圈定本周期的结束时间(周三)，防止周四晚上的新市场数据污染本周期均值
+    const currentEnd = new Date(currentStart);
+    currentEnd.setUTCDate(currentStart.getUTCDate() + 6);
     
     // 上一个周期的起点 (再往前推 7 天)
     const prevStart = new Date(currentStart);
@@ -28,6 +36,7 @@ function getMonctonCycleDates() {
     
     return {
         currentStartStr: currentStart.toISOString().split('T')[0],
+        currentEndStr: currentEnd.toISOString().split('T')[0], // 新增结束时间
         prevStartStr: prevStart.toISOString().split('T')[0]
     };
 }
@@ -37,7 +46,7 @@ export async function handleCycle(request, env) {
 
     try {
         // 1. 动态计算出日历窗口
-        const { currentStartStr, prevStartStr } = getMonctonCycleDates();
+        const { currentStartStr, currentEndStr, prevStartStr } = getMonctonCycleDates();
 
         // 2. 获取本周期内【所有的】EUB 记录，应对多次熔断累加
         const { results: cycleEubData } = await db.prepare(
@@ -83,8 +92,9 @@ export async function handleCycle(request, env) {
         }
 
         // 5. 组装当前周期的数据数组
+        // 架构师修复：加入 r.date <= currentEndStr，严格把控周期在 5 天之内
         const marketCycle = marketData
-            .filter(r => r.date >= currentStartStr)
+            .filter(r => r.date >= currentStartStr && r.date <= currentEndStr)
             .map(r => ({
                 date: r.date,
                 absolute_price: parseFloat(r.rbob_cad_base.toFixed(4)),
