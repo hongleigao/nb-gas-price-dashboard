@@ -50,16 +50,18 @@ const HeroBoard = ({ data, onExplore }) => {
   
   const predicted_change_preTax = avgPreTaxVariance - intVarPreTax;
   
-  let max_daily_variance_preTax = 0;
-  if (n >= 2) {
-      max_daily_variance_preTax = Math.abs(((validDays[n-1].absolute_price / GAL_TO_LITER) * 100) - ((validDays[n-2].absolute_price / GAL_TO_LITER) * 100));
-  } else if (n === 1 && benchmark_price_cl_pretax) {
-      max_daily_variance_preTax = Math.abs(((validDays[0].absolute_price / GAL_TO_LITER) * 100) - benchmark_price_cl_pretax);
+  // 架构师修复：严格比对“最新单日”与“基准价(Benchmark)”的偏差，不再使用“今天减昨天”
+  let latest_daily_variance_preTax = 0;
+  if (n > 0 && benchmark_price_cl_pretax) {
+      const latest_absolute_preTax = (validDays[n-1].absolute_price / GAL_TO_LITER) * 100;
+      latest_daily_variance_preTax = Math.abs(latest_absolute_preTax - benchmark_price_cl_pretax);
   }
 
+  // 风险定级逻辑：基于最终周期均值偏差，或者单日偏离基准价幅度
   let risk_level = 'Low';
   const current_risk_variance_preTax = Math.abs(predicted_change_preTax);
-  if (current_risk_variance_preTax >= 5.0 || max_daily_variance_preTax >= 6.0) risk_level = 'Alert';
+  
+  if (current_risk_variance_preTax >= 5.0 || latest_daily_variance_preTax >= 6.0) risk_level = 'Alert';
   else if (current_risk_variance_preTax >= 4.0) risk_level = 'High';
   else if (current_risk_variance_preTax >= 3.0) risk_level = 'Medium';
 
@@ -90,12 +92,10 @@ const HeroBoard = ({ data, onExplore }) => {
       let displayDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
       let prefix = 'LAST CHANGE:';
 
-      // 架构师修复：智能判断 Today / Yesterday / Tomorrow (严格基于 NB 所在的 Moncton 时区)
       try {
           const getMonctonDateStr = (offsetDays = 0) => {
               const targetDate = new Date();
               targetDate.setDate(targetDate.getDate() + offsetDays);
-              // 强制输出 YYYY-MM-DD 格式进行比对
               return new Intl.DateTimeFormat('en-CA', { 
                   timeZone: 'America/Moncton', 
                   year: 'numeric', month: '2-digit', day: '2-digit' 
@@ -112,10 +112,10 @@ const HeroBoard = ({ data, onExplore }) => {
               displayDate = 'YESTERDAY';
           } else if (effDateStr === tomorrowStr) {
               displayDate = 'TOMORROW';
-              prefix = 'EFFECTIVE:'; // 语义修正：如果生效时间在明天，说明是提前预告的常规调价
+              prefix = 'EFFECTIVE:'; 
           }
       } catch (e) {
-          // 兼容极少数不支持 Intl API 的老旧浏览器，降级显示原始日期
+          // 降级显示
       }
 
       if (current_eub.is_interrupter === 1) {
@@ -173,10 +173,10 @@ const HeroBoard = ({ data, onExplore }) => {
 
   const getThemeClasses = (theme) => {
       switch(theme) {
-          case 'buy': return 'bg-rose-50 text-rose-700 border-rose-200'; // 涨价要买：用警示红
-          case 'wait': return 'bg-emerald-50 text-emerald-800 border-emerald-200'; // 降价可等：用安全绿
-          case 'alert': return 'bg-red-50 text-red-700 border-red-300'; // 极度危险：用正红
-          default: return 'bg-slate-50 text-slate-700 border-slate-200'; // 中立：用板岩灰（带点蓝色的高级灰）
+          case 'buy': return 'bg-rose-50 text-rose-700 border-rose-200'; 
+          case 'wait': return 'bg-emerald-50 text-emerald-800 border-emerald-200'; 
+          case 'alert': return 'bg-red-50 text-red-700 border-red-300'; 
+          default: return 'bg-slate-50 text-slate-700 border-slate-200'; 
       }
   };
 
