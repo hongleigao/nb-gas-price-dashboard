@@ -132,7 +132,7 @@ const HeroBoard = ({ data, onExplore }) => {
           const sign = current_eub.interrupter_variance > 0 ? '+' : '';
           lastAdjText = `${prefix} ${displayDate} (INTERRUPTER ${sign}${current_eub.interrupter_variance}c)`;
       } else {
-          lastAdjText = `${prefix} ${displayDate} (SET TO ${current_eub.max_price} ¢/L)`;
+          lastAdjText = `${prefix} ${displayDate} (NB CAP SET TO ${current_eub.max_price} ¢/L)`;
       }
   }
 
