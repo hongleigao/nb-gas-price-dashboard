@@ -129,8 +129,13 @@ const HeroBoard = ({ data, onExplore }) => {
       }
 
       if (current_eub.is_interrupter === 1) {
-          const sign = current_eub.interrupter_variance > 0 ? '+' : '';
-          lastAdjText = `${prefix} ${displayDate} (INTERRUPTER ${sign}${current_eub.interrupter_variance}c)`;
+          const variance = current_eub.interrupter_variance || 0;
+          const sign = variance > 0 ? '+' : '';
+          
+          // 架构师修复：解决 JS 浮点数精度漏洞 (IEEE 754)，强制保留最大两位小数，并清理尾部的 0
+          const safeVariance = parseFloat(variance.toFixed(2));
+          
+          lastAdjText = `${prefix} ${displayDate} (INTERRUPTER ${sign}${safeVariance}c)`;
       } else {
           lastAdjText = `${prefix} ${displayDate} (NB CAP SET TO ${current_eub.max_price} ¢/L)`;
       }
