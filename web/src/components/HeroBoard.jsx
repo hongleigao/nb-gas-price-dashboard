@@ -57,7 +57,11 @@ const HeroBoard = ({ data, onExplore }) => {
   let latest_daily_variance_preTax = 0;
   if (!isTwilightZone && benchmark_price_cl_pretax) {
       const latest_absolute_preTax = (validDays[n-1].absolute_price / GAL_TO_LITER) * 100;
-      latest_daily_variance_preTax = Math.abs(latest_absolute_preTax - benchmark_price_cl_pretax);
+      
+      // 架构师核心修复：衡量最新单日偏离时，必须扣除已经执行过的熔断值 (intVarPreTax)。
+      // 否则系统会被原始差值蒙蔽，对已经消化的风险产生无限期的“幽灵报警”。
+      const raw_latest_variance = latest_absolute_preTax - benchmark_price_cl_pretax;
+      latest_daily_variance_preTax = Math.abs(raw_latest_variance - intVarPreTax);
   }
 
   // 风险定级逻辑
