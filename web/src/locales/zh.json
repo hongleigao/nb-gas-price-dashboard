@@ -4,7 +4,7 @@
     "selectLanguage": "选择语言"
   },
   "heroboard": {
-    "currentPrice": "当前预测油价",
+    "currentPrice": "当前油站油价约为（NB限价-5.5c）",
     "lastUpdated": "最后更新",
     "marketCycle": "市场周期",
     "riskLevel": "风险等级",
