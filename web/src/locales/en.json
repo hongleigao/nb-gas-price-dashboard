@@ -4,7 +4,7 @@
     "selectLanguage": "Select Language"
   },
   "heroboard": {
-    "currentPrice": "Current Predicted Price",
+    "currentPrice": "Current Pump Price (Est. NB Cap - 5.5c)",
     "lastUpdated": "Last Updated",
     "marketCycle": "Market Cycle",
     "riskLevel": "Risk Level",
