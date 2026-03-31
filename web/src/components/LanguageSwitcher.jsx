@@ -7,10 +7,17 @@ export const LanguageSwitcher = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentLang, setCurrentLang] = useState(i18n.language);
 
+  // 语言代码映射
+  const langCodeMap = {
+    en: 'EN',
+    fr: 'FR',
+    zh: 'CN'
+  };
+
   const languages = [
-    { code: 'en', name: 'English', flag: '🇬🇧' },
-    { code: 'fr', name: 'Français', flag: '🇫🇷' },
-    { code: 'zh', name: '中文', flag: '🇨🇳' }
+    { code: 'en', name: 'English', shortCode: 'EN', flag: '🇬🇧' },
+    { code: 'fr', name: 'Français', shortCode: 'FR', flag: '🇫🇷' },
+    { code: 'zh', name: '中文', shortCode: 'CN', flag: '🇨🇳' }
   ];
 
   useEffect(() => {
@@ -35,8 +42,7 @@ export const LanguageSwitcher = () => {
         aria-label="Select language"
         title="Click to change language"
       >
-        <span className="lang-flag">{currentLanguage.flag}</span>
-        <span className="lang-name">{currentLanguage.name}</span>
+        <span className="lang-code">{currentLanguage.shortCode}</span>
         <span className={`chevron ${isOpen ? 'open' : ''}`}>▼</span>
       </button>
 
@@ -50,7 +56,8 @@ export const LanguageSwitcher = () => {
               onClick={() => handleLanguageChange(lang.code)}
             >
               <span className="lang-flag">{lang.flag}</span>
-              <span className="lang-name">{lang.name}</span>
+              <span className="lang-code">{lang.shortCode}</span>
+              <span className="lang-name-full">{lang.name}</span>
               {currentLang === lang.code && <span className="checkmark">✓</span>}
             </button>
           ))}

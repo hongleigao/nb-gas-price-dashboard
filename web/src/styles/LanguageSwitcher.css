@@ -8,16 +8,19 @@
 .lang-selector-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 4px;
+  padding: 6px 10px;
   background: transparent;
   border: 1px solid var(--color-border, #c5c5d3);
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 600;
   transition: all 0.3s ease;
   color: var(--color-on-surface, #191c1d);
+  height: 32px;
+  min-width: 50px;
+  justify-content: center;
 }
 
 .lang-selector-btn:hover {
@@ -25,18 +28,16 @@
   border-color: var(--color-primary, #00236f);
 }
 
-.lang-selector-btn:active {
+.lang-selector-btn:active,
+.lang-selector-btn:focus {
   background: var(--color-primary, #00236f);
   color: white;
+  border-color: var(--color-primary, #00236f);
 }
 
-.lang-flag {
-  font-size: 1.2rem;
+.lang-code {
   flex-shrink: 0;
-}
-
-.lang-name {
-  flex-shrink: 0;
+  letter-spacing: 0.5px;
 }
 
 .chevron {
@@ -55,13 +56,13 @@
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: 8px;
+  margin-top: 6px;
   background: white;
   border: 1px solid var(--color-border, #e1e3e4);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   z-index: 1000;
-  min-width: 160px;
+  min-width: 140px;
   overflow: hidden;
 }
 
@@ -69,14 +70,15 @@
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 14px 16px;
+  padding: 10px 12px;
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   transition: background 0.2s;
-  gap: 12px;
+  gap: 8px;
   color: var(--color-on-surface, #191c1d);
+  min-height: 40px;
 }
 
 .lang-option:hover {
@@ -93,25 +95,42 @@
   border-bottom: 1px solid var(--color-divider, #f3f4f5);
 }
 
+.lang-flag {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.lang-code {
+  font-size: 0.85rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  min-width: 24px;
+}
+
+.lang-name-full {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
 .checkmark {
   margin-left: auto;
   color: var(--color-primary, #00236f);
   font-weight: bold;
+  font-size: 0.9rem;
 }
 
 /* ============ 移动端优化 ============ */
 
 @media (max-width: 480px) {
   .lang-selector-btn {
-    padding: 8px;
+    padding: 6px 8px;
+    min-width: auto;
+    height: 32px;
   }
 
-  .lang-selector-btn .lang-name {
-    display: none; /* 隐藏文字节省空间 */
-  }
-
-  .lang-flag {
-    font-size: 1.3rem;
+  .lang-selector-btn .lang-code {
+    font-size: 0.75rem;
   }
 
   .lang-dropdown {
@@ -119,16 +138,15 @@
     left: 50%;
     transform: translateX(-50%);
     width: calc(100vw - 32px);
-    max-width: 300px;
+    max-width: 280px;
   }
 
   .lang-option {
-    padding: 16px 12px; /* 增加点击区域 */
-    min-height: 48px; /* Material Design 标准 */
-    justify-content: center;
+    padding: 12px 10px;
+    min-height: 40px;
   }
 
   .lang-option:not(:last-child) {
-    border-bottom: none;
+    border-bottom: 1px solid var(--color-divider, #f3f4f5);
   }
 }
