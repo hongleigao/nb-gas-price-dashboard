@@ -15,7 +15,77 @@
     "fallingTrend": "Falling Trend",
     "low": "Low",
     "medium": "Medium",
-    "high": "High"
+    "high": "High",
+    "recommendations": {
+      "neutral": {
+        "title": "Buy As Needed",
+        "subtitle": "Prices are relatively stable. No major routine or emergency shifts expected.",
+        "icon": "local_gas_station"
+      },
+      "twilightZone": {
+        "title": "Awaiting Market Data",
+        "subtitle": "A new pricing cycle has begun. Waiting for the first market close...",
+        "icon": "hourglass_empty"
+      },
+      "alert": {
+        "falling": {
+          "title": "Wait to Fill",
+          "subtitle": "Critical volatility. An emergency price drop is expected ANYTIME."
+        },
+        "rising": {
+          "title": "Fill Up Immediately",
+          "subtitle": "Critical volatility. An emergency price hike is expected ANYTIME."
+        },
+        "icon": "warning"
+      },
+      "high": {
+        "falling": {
+          "title": "Hold Off",
+          "subtitle": "High risk of an unscheduled price drop. Avoid filling up if possible."
+        },
+        "rising": {
+          "title": "Fill Up Very Soon",
+          "subtitle": "High risk of an unscheduled price hike. Do not wait until Friday."
+        },
+        "icon_falling": "trending_down",
+        "icon_rising": "trending_up"
+      },
+      "tier3": {
+        "falling": {
+          "title": "Wait for Friday",
+          "subtitle": "Market costs are down. Expecting a ~{{change}}c routine drop on Friday."
+        },
+        "rising": {
+          "title": "Fill Up Before Friday",
+          "subtitle": "Market costs are up. Expecting a ~{{change}}c routine increase on Friday."
+        },
+        "icon_falling": "trending_down",
+        "icon_rising": "trending_up"
+      }
+    },
+    "prediction": {
+      "retailImpact": "≈ retail impact incl. HST",
+      "falling": "FALLING",
+      "rising": "RISING",
+      "expectedAnytime": "EXPECTED ANYTIME (HIGH RISK)"
+    },
+    "adjustment": {
+      "lastChange": "LAST CHANGE:",
+      "effective": "EFFECTIVE:",
+      "today": "TODAY",
+      "yesterday": "YESTERDAY",
+      "tomorrow": "TOMORROW",
+      "interrupter": "INTERRUPTER",
+      "nbCapSet": "NB CAP SET TO",
+      "perLiter": "¢/L"
+    },
+    "riskStatus": {
+      "currentStatus": "Current Status",
+      "alert": "Critical volatility detected. Interrupter conditions met.",
+      "high": "High variance detected. Elevated risk of adjustment.",
+      "medium": "Market variance is currently within the moderate range, monitoring closely.",
+      "low": "Market variance is currently low. Stable outlook."
+    }
   },
   "cycledetails": {
     "title": "Market Cycle Details",
@@ -37,76 +107,6 @@
     "date": "Date",
     "price": "Price",
     "tooltip": "Price: {{price}}¢ on {{date}}"
-  },
-  "heroboard.recommendations": {
-    "neutral": {
-      "title": "Buy As Needed",
-      "subtitle": "Prices are relatively stable. No major routine or emergency shifts expected.",
-      "icon": "local_gas_station"
-    },
-    "twilightZone": {
-      "title": "Awaiting Market Data",
-      "subtitle": "A new pricing cycle has begun. Waiting for the first market close...",
-      "icon": "hourglass_empty"
-    },
-    "alert": {
-      "falling": {
-        "title": "Wait to Fill",
-        "subtitle": "Critical volatility. An emergency price drop is expected ANYTIME."
-      },
-      "rising": {
-        "title": "Fill Up Immediately",
-        "subtitle": "Critical volatility. An emergency price hike is expected ANYTIME."
-      },
-      "icon": "warning"
-    },
-    "high": {
-      "falling": {
-        "title": "Hold Off",
-        "subtitle": "High risk of an unscheduled price drop. Avoid filling up if possible."
-      },
-      "rising": {
-        "title": "Fill Up Very Soon",
-        "subtitle": "High risk of an unscheduled price hike. Do not wait until Friday."
-      },
-      "icon_falling": "trending_down",
-      "icon_rising": "trending_up"
-    },
-    "tier3": {
-      "falling": {
-        "title": "Wait for Friday",
-        "subtitle": "Market costs are down. Expecting a ~{{change}}c routine drop on Friday."
-      },
-      "rising": {
-        "title": "Fill Up Before Friday",
-        "subtitle": "Market costs are up. Expecting a ~{{change}}c routine increase on Friday."
-      },
-      "icon_falling": "trending_down",
-      "icon_rising": "trending_up"
-    }
-  },
-  "heroboard.prediction": {
-    "retailImpact": "≈ retail impact incl. HST",
-    "falling": "FALLING",
-    "rising": "RISING",
-    "expectedAnytime": "EXPECTED ANYTIME (HIGH RISK)"
-  },
-  "heroboard.adjustment": {
-    "lastChange": "LAST CHANGE:",
-    "effective": "EFFECTIVE:",
-    "today": "TODAY",
-    "yesterday": "YESTERDAY",
-    "tomorrow": "TOMORROW",
-    "interrupter": "INTERRUPTER",
-    "nbCapSet": "NB CAP SET TO",
-    "perLiter": "¢/L"
-  },
-  "heroboard.riskStatus": {
-    "currentStatus": "Current Status",
-    "alert": "Critical volatility detected. Interrupter conditions met.",
-    "high": "High variance detected. Elevated risk of adjustment.",
-    "medium": "Market variance is currently within the moderate range, monitoring closely.",
-    "low": "Market variance is currently low. Stable outlook."
   },
   "common": {
     "loading": "Loading...",

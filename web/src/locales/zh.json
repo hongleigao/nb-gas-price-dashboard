@@ -1,6 +1,6 @@
 {
   "nav": {
-    "title": "新不伦瑞克油价仪表盘",
+    "title": "NB油价达人",
     "selectLanguage": "选择语言"
   },
   "heroboard": {
@@ -15,7 +15,77 @@
     "fallingTrend": "下降趋势",
     "low": "低",
     "medium": "中等",
-    "high": "高"
+    "high": "高",
+    "recommendations": {
+    "neutral": {
+      "title": "按需加油",
+      "subtitle": "油价相对稳定，预期没有重大变化。",
+      "icon": "local_gas_station"
+    },
+    "twilightZone": {
+      "title": "等待市场数据",
+      "subtitle": "新的定价周期已开始，等待第一次市场收盘...",
+      "icon": "hourglass_empty"
+    },
+    "alert": {
+      "falling": {
+        "title": "等等再加油",
+        "subtitle": "市场波动严重。可能随时出现紧急降价。"
+      },
+      "rising": {
+        "title": "赶紧去满油",
+        "subtitle": "市场波动严重。可能随时出现紧急涨价。"
+      },
+      "icon": "warning"
+    },
+    "high": {
+      "falling": {
+        "title": "先别加油",
+        "subtitle": "有较高风险出现意外降价，建议暂停加油。"
+      },
+      "rising": {
+        "title": "赶紧加油",
+        "subtitle": "有较高风险出现熔断涨价，不要等到周五。"
+      },
+      "icon_falling": "trending_down",
+      "icon_rising": "trending_up"
+    },
+    "tier3": {
+      "falling": {
+        "title": "等到周五",
+        "subtitle": "市场价格下降，预计周五会有约 {{change}}c 的常规降幅。"
+      },
+      "rising": {
+        "title": "周五前加油",
+        "subtitle": "市场价格上升，预计周五会有约 {{change}}c 的常规涨幅。"
+      },
+      "icon_falling": "trending_down",
+      "icon_rising": "trending_up"
+    }
+    },
+    "prediction": {
+      "retailImpact": "≈ 零售价格(含税)",
+      "falling": "下跌",
+      "rising": "上升",
+      "expectedAnytime": "预计随时调整（高风险）"
+    },
+    "adjustment": {
+      "lastChange": "上次调价:",
+      "effective": "生效:",
+      "today": "今天",
+      "yesterday": "昨天",
+      "tomorrow": "明天",
+      "interrupter": "熔断器",
+      "nbCapSet": "NB最高价设定为",
+      "perLiter": "¢/L"
+    },
+    "riskStatus": {
+      "currentStatus": "当前状态",
+      "alert": "检测到严重波动。达到熔断条件。",
+      "high": "检测到高波动。存在调整风险。",
+      "medium": "市场波动处于中等水平，持续监控中。",
+      "low": "市场波动较低，前景稳定。"
+    }
   },
   "cycledetails": {
     "title": "市场周期详情",
@@ -37,76 +107,6 @@
     "date": "日期",
     "price": "价格",
     "tooltip": "油价: {{price}}¢ ({{date}})"
-  },
-  "heroboard.recommendations": {
-    "neutral": {
-      "title": "按需加油",
-      "subtitle": "油价相对稳定，预期没有重大变化。",
-      "icon": "local_gas_station"
-    },
-    "twilightZone": {
-      "title": "等待市场数据",
-      "subtitle": "新的定价周期已开始，等待第一次市场收盘...",
-      "icon": "hourglass_empty"
-    },
-    "alert": {
-      "falling": {
-        "title": "等待后再加油",
-        "subtitle": "市场波动严重。可能随时出现紧急降价。"
-      },
-      "rising": {
-        "title": "立即加满油",
-        "subtitle": "市场波动严重。可能随时出现紧急涨价。"
-      },
-      "icon": "warning"
-    },
-    "high": {
-      "falling": {
-        "title": "暂停加油",
-        "subtitle": "有较高风险出现意外降价，建议暂停加油。"
-      },
-      "rising": {
-        "title": "尽快加油",
-        "subtitle": "有较高风险出现意外涨价，不要等到周五。"
-      },
-      "icon_falling": "trending_down",
-      "icon_rising": "trending_up"
-    },
-    "tier3": {
-      "falling": {
-        "title": "等到周五",
-        "subtitle": "市场价格下降，预计周五会有约 {{change}}c 的常规降幅。"
-      },
-      "rising": {
-        "title": "周五前加油",
-        "subtitle": "市场价格上升，预计周五会有约 {{change}}c 的常规涨幅。"
-      },
-      "icon_falling": "trending_down",
-      "icon_rising": "trending_up"
-    }
-  },
-  "heroboard.prediction": {
-    "retailImpact": "≈ 零售价格含 HST",
-    "falling": "下跌",
-    "rising": "上升",
-    "expectedAnytime": "预计随时调整（高风险）"
-  },
-  "heroboard.adjustment": {
-    "lastChange": "最后调价:",
-    "effective": "生效:",
-    "today": "今天",
-    "yesterday": "昨天",
-    "tomorrow": "明天",
-    "interrupter": "熔断器",
-    "nbCapSet": "新省最高价设定为",
-    "perLiter": "¢/L"
-  },
-  "heroboard.riskStatus": {
-    "currentStatus": "当前状态",
-    "alert": "检测到严重波动。达到熔断条件。",
-    "high": "检测到高波动。存在调整风险。",
-    "medium": "市场波动处于中等水平，持续监控中。",
-    "low": "市场波动较低，前景稳定。"
   },
   "common": {
     "loading": "加载中...",
