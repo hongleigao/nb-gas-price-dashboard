@@ -101,33 +101,45 @@
     "emptyState": {
       "title": "周期分析",
       "subtitle": "我们的数据管道暂时出错了...",
-      "instruction": "请返回仪表盘重试。"
+      "instruction": "请返回重试。"
     },
     "header": {
-      "title": "周期分析（零售价格影响）"
+      "title": "周期分析（零售油价影响）"
     },
     "calculation": {
       "section": "当前计算公式",
-      "postTaxHeader": "含税后计算",
-      "formula": "* 公式：({{days}} 天市场差异平均值) - (本周期总熔断调整值)",
+      "postTaxHeader": "含税价格计算公式",
+      "formula": "* 公式解释：({{days}} 天市场差异平均值) - (本周期总的熔断调整值)",
       "totalInt": "总熔断值"
     },
     "pricingCycle": {
       "section": "5天定价周期",
-      "order": "排序：周四-周三"
+      "order": "顺序：周四-周三"
     },
     "timeline": {
       "latestAdjustment": "最新调整",
-      "scheduledOrUnscheduled": "常规或非常规调整",
-      "triggered": "已触发",
+      "scheduledOrUnscheduled": "常规或非常规调价",
+      "triggered": "已调价",
       "day": "第 {{index}} 天",
-      "marketNotClosed": "市场未收盘",
+      "marketNotClosed": "国际油价市场未收盘",
       "marketClose": "市场收盘价：{{price}} ¢/升",
-      "pumpImpact": "加油站价格影响"
+      "pumpImpact": "油站价格影响"
     }
   },
   "historychart": {
-    "title": "历史油价趋势",
+    "title": "精致趋势",
+    "liveData": "实时市场数据",
+    "subtitle30Day": "30天波动性快照",
+    "subtitle90Day": "90天分歧分析",
+    "subtitle365Day": "1年宏观趋势分析",
+    "eubRetailPrice": "新不伦瑞克零售价 (含税)",
+    "nymexBaseCost": "NYMEX基础成本 (不含税)",
+    "postTaxUnit": "¢/L (含税)",
+    "preTaxUnit": "¢/L (不含税)",
+    "tab30d": "30天",
+    "tab90d": "90天",
+    "tab365d": "1年",
+    "loading": "加载图表数据中...",
     "averagePrice": "平均价格",
     "priceRange": "价格范围",
     "minPrice": "最低",

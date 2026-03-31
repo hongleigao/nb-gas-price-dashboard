@@ -93,7 +93,7 @@ const HistoryChart = () => {
         formatter: function(params) {
             let html = `<div>${params[0].axisValue}</div>`;
             params.forEach(p => {
-                if (p.seriesName === 'EUB Retail Price (Post-Tax)') {
+                if (p.seriesName === t('historychart.eubRetailPrice')) {
                     html += `<div>${p.marker} ${p.seriesName}: <b>${p.value !== undefined ? p.value.toFixed(1) + ' ¢/L' : '-'}</b></div>`;
                 } else {
                     html += `<div>${p.marker} ${p.seriesName}: <b>${p.value !== undefined ? p.value.toFixed(2) + ' ¢/L' : '-'}</b></div>`;
@@ -102,7 +102,7 @@ const HistoryChart = () => {
             return html;
         }
       },
-      legend: { bottom: 0, data: ['EUB Retail Price (Post-Tax)', 'NYMEX Base Cost (Pre-Tax)'] },
+      legend: { bottom: 0, data: [t('historychart.eubRetailPrice'), t('historychart.nymexBaseCost')] },
       grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
       xAxis: {
         type: 'category',
@@ -113,14 +113,14 @@ const HistoryChart = () => {
       yAxis: [
         {
           type: 'value',
-          name: '¢/L (Post-Tax)',
+          name: t('historychart.postTaxUnit'),
           axisLine: { lineStyle: { color: '#00236f' } },
           splitLine: { lineStyle: { color: '#e7e8e9' } },
           scale: true
         },
         {
           type: 'value',
-          name: '¢/L (Pre-Tax)',
+          name: t('historychart.preTaxUnit'),
           axisLine: { lineStyle: { color: '#059669' } },
           splitLine: { show: false },
           scale: true,
@@ -129,7 +129,7 @@ const HistoryChart = () => {
       ],
       series: [
         {
-          name: 'EUB Retail Price (Post-Tax)',
+          name: t('historychart.eubRetailPrice'),
           type: 'line',
           step: 'end',
           data: eubPrices,
@@ -138,7 +138,7 @@ const HistoryChart = () => {
           lineStyle: { width: 3 }
         },
         {
-          name: 'NYMEX Base Cost (Pre-Tax)',
+          name: t('historychart.nymexBaseCost'),
           type: 'line',
           yAxisIndex: 1,
           smooth: true,
@@ -163,26 +163,26 @@ const HistoryChart = () => {
   }, [data]);
 
   const getSubTitle = () => {
-    if (days === 30) return "30 Day Volatility Snapshot";
-    if (days === 365) return "1 Year Macro Trend Analysis";
-    return "90 Day Divergence Analysis";
+    if (days === 30) return t('historychart.subtitle30Day');
+    if (days === 365) return t('historychart.subtitle365Day');
+    return t('historychart.subtitle90Day');
   };
 
   return (
     <div className="space-y-6 pb-8">
       <section className="mb-6">
-        <h2 className="font-headline font-bold text-3xl text-primary tracking-tight">Refined Trends</h2>
+        <h2 className="font-headline font-bold text-3xl text-primary tracking-tight">{t('historychart.title')}</h2>
         <div className="flex items-center gap-2 mt-2">
-          <span className="bg-secondary/10 text-secondary text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase">Live Market Data</span>
+          <span className="bg-secondary/10 text-secondary text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase">{t('historychart.liveData')}</span>
           <span className="text-on-surface-variant text-xs font-medium">{getSubTitle()}</span>
         </div>
       </section>
 
       <div className="bg-surface-container-low p-1.5 rounded-xl w-max flex items-center shadow-inner mb-2">
         {[
-          { label: '30D', value: 30 },
-          { label: '90D', value: 90 },
-          { label: '1Y', value: 365 }
+          { label: t('historychart.tab30d'), value: 30 },
+          { label: t('historychart.tab90d'), value: 90 },
+          { label: t('historychart.tab365d'), value: 365 }
         ].map(tab => (
           <button
             key={tab.value}
