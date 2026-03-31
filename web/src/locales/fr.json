@@ -67,7 +67,8 @@
       "retailImpact": "≈ impact tarifaire incl. TPS",
       "falling": "EN BAISSE",
       "rising": "EN HAUSSE",
-      "expectedAnytime": "ATTENDU N'IMPORTE QUAND (RISQUE ÉLEVÉ)"
+      "expectedAnytime": "ATTENDU N'IMPORTE QUAND (RISQUE ÉLEVÉ)",
+      "estimatedNextAdj": "EST. PROCHAIN ADJ"
     },
     "adjustment": {
       "lastChange": "DERNIER CHANGEMENT:",
@@ -86,6 +87,54 @@
       "medium": "La variance du marché est actuellement modérée, surveillance étroite.",
       "low": "La variance du marché est actuellement faible. Stabilité."
     }
+  },
+  "cycledetails": {
+    "title": "Détails du Cycle du Marché",
+    "cyclePhase": "Phase du Cycle",
+    "daysInCycle": "Jours dans le Cycle",
+    "expectedDuration": "Durée Prévue",
+    "phase1": "Accumulation",
+    "phase2": "Phase de Hausse",
+    "phase3": "Pic",
+    "phase4": "Phase de Baisse",
+    "days": "jours",
+    "emptyState": {
+      "title": "Analyse du Cycle",
+      "subtitle": "Notre pipeline de données est temporairement en panne...",
+      "instruction": "Veuillez retourner au tableau de bord et réessayer."
+    },
+    "header": {
+      "title": "Analyse du Cycle (Impact Tarifaire)"
+    },
+    "calculation": {
+      "section": "Formule de Calcul Active",
+      "postTaxHeader": "Calcul Post-TPS",
+      "formula": "* Formule: (Moyenne de {{days}} jours variance du marché) - (Total d'ajustement de disjoncteur dans ce cycle)",
+      "totalInt": "Total Int."
+    },
+    "pricingCycle": {
+      "section": "Cycle de Tarification 5 Jours",
+      "order": "COMMANDER: JEU-MER"
+    },
+    "timeline": {
+      "latestAdjustment": "Dernier Ajustement",
+      "scheduledOrUnscheduled": "Programmé ou Non Programmé",
+      "triggered": "Déclenché",
+      "day": "Jour {{index}}",
+      "marketNotClosed": "Marché non encore fermé",
+      "marketClose": "Clôture du Marché: {{price}} ¢/L",
+      "pumpImpact": "Impact Tarifaire"
+    }
+  },
+  "historychart": {
+    "title": "Tendances Historiques des Prix",
+    "averagePrice": "Prix Moyen",
+    "priceRange": "Gamme de Prix",
+    "minPrice": "Min",
+    "maxPrice": "Max",
+    "date": "Date",
+    "price": "Prix",
+    "tooltip": "Prix: {{price}}¢ le {{date}}"
   },
   "common": {
     "loading": "Chargement...",

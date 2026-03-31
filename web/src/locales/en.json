@@ -67,7 +67,8 @@
       "retailImpact": "≈ retail impact incl. HST",
       "falling": "FALLING",
       "rising": "RISING",
-      "expectedAnytime": "EXPECTED ANYTIME (HIGH RISK)"
+      "expectedAnytime": "EXPECTED ANYTIME (HIGH RISK)",
+      "estimatedNextAdj": "EST. NEXT ADJ"
     },
     "adjustment": {
       "lastChange": "LAST CHANGE:",
@@ -96,7 +97,34 @@
     "phase2": "Rising Phase",
     "phase3": "Peak",
     "phase4": "Declining Phase",
-    "days": "days"
+    "days": "days",
+    "emptyState": {
+      "title": "Cycle Analysis",
+      "subtitle": "Our data pipeline is temporarily out of gas...",
+      "instruction": "Please return to the dashboard and try again."
+    },
+    "header": {
+      "title": "Cycle Analysis (Retail Impact)"
+    },
+    "calculation": {
+      "section": "Active Calculation Formula",
+      "postTaxHeader": "Post-Tax Calculation",
+      "formula": "* Formula: (Avg of {{days}} days market variance) - (Total interrupter adjustment in this cycle)",
+      "totalInt": "Total Int."
+    },
+    "pricingCycle": {
+      "section": "5-Day Pricing Cycle",
+      "order": "ORDERED: THU-WED"
+    },
+    "timeline": {
+      "latestAdjustment": "Latest Adjustment",
+      "scheduledOrUnscheduled": "Scheduled or Unscheduled",
+      "triggered": "Triggered",
+      "day": "Day {{index}}",
+      "marketNotClosed": "Market not closed",
+      "marketClose": "Market Close: {{price}} ¢/L",
+      "pumpImpact": "Pump Impact"
+    }
   },
   "historychart": {
     "title": "Historical Price Trends",

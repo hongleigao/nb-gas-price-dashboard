@@ -33,7 +33,7 @@
         "subtitle": "市场波动严重。可能随时出现紧急降价。"
       },
       "rising": {
-        "title": "赶紧去满油",
+        "title": "赶紧去加油",
         "subtitle": "市场波动严重。可能随时出现紧急涨价。"
       },
       "icon": "warning"
@@ -64,10 +64,11 @@
     }
     },
     "prediction": {
-      "retailImpact": "≈ 零售价格(含税)",
+      "retailImpact": "预估含税零售价",
       "falling": "下跌",
       "rising": "上升",
-      "expectedAnytime": "预计随时调整（高风险）"
+      "expectedAnytime": "预计随时调整（高风险）",
+      "estimatedNextAdj": "预计下次调整"
     },
     "adjustment": {
       "lastChange": "上次调价:",
@@ -75,8 +76,8 @@
       "today": "今天",
       "yesterday": "昨天",
       "tomorrow": "明天",
-      "interrupter": "熔断器",
-      "nbCapSet": "NB最高价设定为",
+      "interrupter": "熔断导致调整",
+      "nbCapSet": "NB最高限价设定为",
       "perLiter": "¢/L"
     },
     "riskStatus": {
@@ -88,7 +89,7 @@
     }
   },
   "cycledetails": {
-    "title": "市场周期详情",
+    "title": "油价预测详情",
     "cyclePhase": "周期阶段",
     "daysInCycle": "周期天数",
     "expectedDuration": "预期持续时间",
@@ -96,7 +97,34 @@
     "phase2": "上升阶段",
     "phase3": "顶峰",
     "phase4": "下降阶段",
-    "days": "天"
+    "days": "天",
+    "emptyState": {
+      "title": "周期分析",
+      "subtitle": "我们的数据管道暂时出错了...",
+      "instruction": "请返回仪表盘重试。"
+    },
+    "header": {
+      "title": "周期分析（零售价格影响）"
+    },
+    "calculation": {
+      "section": "当前计算公式",
+      "postTaxHeader": "含税后计算",
+      "formula": "* 公式：({{days}} 天市场差异平均值) - (本周期总熔断调整值)",
+      "totalInt": "总熔断值"
+    },
+    "pricingCycle": {
+      "section": "5天定价周期",
+      "order": "排序：周四-周三"
+    },
+    "timeline": {
+      "latestAdjustment": "最新调整",
+      "scheduledOrUnscheduled": "常规或非常规调整",
+      "triggered": "已触发",
+      "day": "第 {{index}} 天",
+      "marketNotClosed": "市场未收盘",
+      "marketClose": "市场收盘价：{{price}} ¢/升",
+      "pumpImpact": "加油站价格影响"
+    }
   },
   "historychart": {
     "title": "历史油价趋势",

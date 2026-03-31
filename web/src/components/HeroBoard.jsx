@@ -108,7 +108,7 @@ const HeroBoard = ({ data, onExplore }) => {
 
   const nextAdjDateText = risk_level === 'Alert' 
       ? t('heroboard.prediction.expectedAnytime')
-      : `EST. NEXT ADJ: ${getNextAdjustmentDate()}`;
+      : `${t('heroboard.prediction.estimatedNextAdj')}: ${getNextAdjustmentDate()}`;
 
   let lastAdjText = '';
   if (current_eub?.effective_date) {

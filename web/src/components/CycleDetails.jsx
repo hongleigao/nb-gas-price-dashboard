@@ -15,12 +15,12 @@ const CycleDetails = ({ onBack, data }) => {
           <button onClick={onBack} className="text-blue-900 hover:bg-slate-200/50 p-2 rounded-full active:scale-95 transition-all">
             <span className="material-symbols-outlined">arrow_back</span>
           </button>
-          <h1 className="text-blue-900 font-manrope font-bold text-lg">Cycle Analysis</h1>
+          <h1 className="text-blue-900 font-manrope font-bold text-lg">{t('cycledetails.emptyState.title')}</h1>
         </div>
         <div className="flex flex-col items-center justify-center py-10 px-6 text-center space-y-4 bg-surface-container-lowest rounded-3xl border border-dashed border-outline-variant/30">
           <span className="text-5xl drop-shadow-sm grayscale opacity-50">⛽</span>
           <p className="text-on-surface-variant text-sm font-medium">
-            Our data pipeline is temporarily out of gas...<br/>Please return to the dashboard and try again.
+            {t('cycledetails.emptyState.subtitle')}<br/>{t('cycledetails.emptyState.instruction')}
           </p>
         </div>
       </div>
@@ -108,26 +108,26 @@ const CycleDetails = ({ onBack, data }) => {
         <button onClick={onBack} className="text-blue-900 hover:bg-slate-200/50 p-2 rounded-full active:scale-95 transition-all">
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
-        <h1 className="text-blue-900 font-manrope font-bold text-lg">Cycle Analysis (Retail Impact)</h1>
+        <h1 className="text-blue-900 font-manrope font-bold text-lg">{t('cycledetails.header.title')}</h1>
       </div>
 
       <section className="space-y-4">
-        <h2 className="font-headline font-bold text-on-surface-variant tracking-tight text-sm uppercase px-2">Active Calculation Formula</h2>
+        <h2 className="font-headline font-bold text-on-surface-variant tracking-tight text-sm uppercase px-2">{t('cycledetails.calculation.section')}</h2>
         <div className="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/20 shadow-sm">
-            <h3 className="text-xs font-bold text-outline-variant uppercase tracking-wider mb-4">Post-Tax Calculation</h3>
+            <h3 className="text-xs font-bold text-outline-variant uppercase tracking-wider mb-4">{t('cycledetails.calculation.postTaxHeader')}</h3>
             <div className="font-mono text-sm md:text-base text-on-surface bg-surface-container-low p-4 rounded-lg overflow-x-auto whitespace-nowrap">
-                {avgPostTaxVariance.toFixed(2)}c (Avg) - ({intVar.toFixed(2)}c <span className="text-[10px] text-outline-variant">Total Int.</span>) = <span className="font-bold text-primary">{finalStr} ¢</span>
+                {avgPostTaxVariance.toFixed(2)}c (Avg) - ({intVar.toFixed(2)}c <span className="text-[10px] text-outline-variant">{t('cycledetails.calculation.totalInt')}</span>) = <span className="font-bold text-primary">{finalStr} ¢</span>
             </div>
             <p className="text-[11px] text-on-surface-variant mt-3 text-secondary">
-                * Formula: (Avg of {countForAvg} days market variance) - (Total interrupter adjustment in this cycle)
+                {t('cycledetails.calculation.formula', { days: countForAvg })}
             </p>
         </div>
       </section>
 
       <section className="space-y-6">
         <div className="flex items-end justify-between px-2">
-          <h2 className="font-headline font-bold text-on-surface-variant tracking-tight text-sm uppercase">5-Day Pricing Cycle</h2>
-          <span className="text-[10px] font-bold text-outline uppercase tracking-widest">ORDERED: THU-WED</span>
+          <h2 className="font-headline font-bold text-on-surface-variant tracking-tight text-sm uppercase">{t('cycledetails.pricingCycle.section')}</h2>
+          <span className="text-[10px] font-bold text-outline uppercase tracking-widest">{t('cycledetails.pricingCycle.order')}</span>
         </div>
         
         <div className="space-y-3">
@@ -145,8 +145,8 @@ const CycleDetails = ({ onBack, data }) => {
                         <span className="font-headline font-extrabold text-lg leading-tight">{localDate.getDate()}</span>
                       </div>
                       <div>
-                        <p className="font-headline font-bold text-error text-base">Latest Adjustment</p>
-                        <p className="text-xs font-medium text-error/80">Scheduled or Unscheduled</p>
+                        <p className="font-headline font-bold text-error text-base">{t('cycledetails.timeline.latestAdjustment')}</p>
+                        <p className="text-xs font-medium text-error/80">{t('cycledetails.timeline.scheduledOrUnscheduled')}</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -154,7 +154,7 @@ const CycleDetails = ({ onBack, data }) => {
                         {event.variance > 0 ? '+' : ''}{event.variance.toFixed(2)}c
                       </p>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase bg-error text-white">
-                        Triggered
+                        {t('cycledetails.timeline.triggered')}
                       </span>
                     </div>
                   </div>
@@ -173,9 +173,9 @@ const CycleDetails = ({ onBack, data }) => {
                     </span>
                   </div>
                   <div>
-                    <p className={`font-headline font-bold text-base ${event.isPending ? 'text-slate-400' : 'text-on-surface'}`}>Day {event.dayIndex}</p>
+                    <p className={`font-headline font-bold text-base ${event.isPending ? 'text-slate-400' : 'text-on-surface'}`}>{t('cycledetails.timeline.day', { index: event.dayIndex })}</p>
                     <p className={`text-xs font-mono ${event.isPending ? 'text-slate-400 italic' : 'text-on-surface-variant'}`}>
-                      {event.isPending ? 'Market not closed' : `Market Close: ${event.absolute_price_cl_pretax.toFixed(2)} ¢/L`}
+                      {event.isPending ? t('cycledetails.timeline.marketNotClosed') : t('cycledetails.timeline.marketClose', { price: event.absolute_price_cl_pretax.toFixed(2) })}
                     </p>
                   </div>
                 </div>
@@ -185,7 +185,7 @@ const CycleDetails = ({ onBack, data }) => {
                       {event.postTaxVariance > 0 ? '+' : ''}{event.postTaxVariance.toFixed(2)}c
                     </p>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${event.isFalling ? 'bg-tertiary-fixed/20 text-tertiary-fixed' : 'bg-error/20 text-error'}`}>
-                      Pump Impact
+                      {t('cycledetails.timeline.pumpImpact')}
                     </span>
                   </div>
                 )}
