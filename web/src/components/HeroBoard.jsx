@@ -64,18 +64,27 @@ const HeroBoard = ({ data, onExplore }) => {
       latest_daily_variance_preTax = Math.abs(raw_latest_variance - intVarPreTax);
   }
 
+  // 架构师新增：引入 EUB 法定静默期 (Statutory Silent Period) 逻辑
+  const getMonctonWeekday = () => {
+      return new Intl.DateTimeFormat('en-US', { timeZone: 'America/Moncton', weekday: 'short' }).format(new Date());
+  };
+  const currentWeekday = getMonctonWeekday();
+  const isSilentPeriod = currentWeekday === 'Tue' || currentWeekday === 'Wed';
+
   // 风险定级逻辑
   let risk_level = 'Low';
   const current_risk_variance_preTax = Math.abs(predicted_change_preTax);
   
-  // 架构师修复：如果是空窗期，强制无风险
+  // 架构师重构：结合数学阈值与法定静默期进行风险定级
   if (isTwilightZone) {
       risk_level = 'Low';
-  } else if (current_risk_variance_preTax >= 5.0 || latest_daily_variance_preTax >= 6.0) {
+  } else if ((current_risk_variance_preTax >= 5.0 || latest_daily_variance_preTax >= 6.0) && !isSilentPeriod) {
+      // 只有在非静默期，且突破死线时，才触发红色 Alert
       risk_level = 'Alert';
-  } else if (current_risk_variance_preTax >= 4.0) {
-      risk_level = 'High';
-  } else if (current_risk_variance_preTax >= 3.0) {
+  } else if (current_risk_variance_preTax >= 4.0 || latest_daily_variance_preTax >= 4.5) {
+      // 如果单日波动高达 4.5~5.9 (例如这次的 5.37)，或者处于静默期的暴涨，降级为 High 或 Medium
+      risk_level = isSilentPeriod ? 'Medium' : 'High'; 
+  } else if (current_risk_variance_preTax >= 3.0 || latest_daily_variance_preTax >= 3.5) {
       risk_level = 'Medium';
   }
 
