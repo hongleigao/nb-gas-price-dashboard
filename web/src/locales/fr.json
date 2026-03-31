@@ -38,6 +38,76 @@
     "price": "Prix",
     "tooltip": "Prix: {{price}}¢ le {{date}}"
   },
+  "heroboard.recommendations": {
+    "neutral": {
+      "title": "Acheter Selon les Besoins",
+      "subtitle": "Les prix sont relativement stables. Aucun changement majeur prévu.",
+      "icon": "local_gas_station"
+    },
+    "twilightZone": {
+      "title": "En Attente des Données de Marché",
+      "subtitle": "Un nouveau cycle de tarification a commencé. En attente de la première clôture du marché...",
+      "icon": "hourglass_empty"
+    },
+    "alert": {
+      "falling": {
+        "title": "Attendre pour Faire le Plein",
+        "subtitle": "Volatilité critique. Une baisse d'urgence est attendue À TOUT MOMENT."
+      },
+      "rising": {
+        "title": "Faire le Plein Immédiatement",
+        "subtitle": "Volatilité critique. Une hausse d'urgence est attendue À TOUT MOMENT."
+      },
+      "icon": "warning"
+    },
+    "high": {
+      "falling": {
+        "title": "Attendre",
+        "subtitle": "Risque élevé d'une baisse imprévue. Évitez de faire le plein si possible."
+      },
+      "rising": {
+        "title": "Faire le Plein Très Bientôt",
+        "subtitle": "Risque élevé d'une hausse imprévue. N'attendez pas jusqu'à vendredi."
+      },
+      "icon_falling": "trending_down",
+      "icon_rising": "trending_up"
+    },
+    "tier3": {
+      "falling": {
+        "title": "Attendre Vendredi",
+        "subtitle": "Les coûts du marché baissent. Attendre une baisse habituelle d'environ {{change}}c vendredi."
+      },
+      "rising": {
+        "title": "Faire le Plein Avant Vendredi",
+        "subtitle": "Les coûts du marché augmentent. Attendre une hausse habituelle d'environ {{change}}c vendredi."
+      },
+      "icon_falling": "trending_down",
+      "icon_rising": "trending_up"
+    }
+  },
+  "heroboard.prediction": {
+    "retailImpact": "≈ impact détail inc. TVH",
+    "falling": "BAISSE",
+    "rising": "HAUSSE",
+    "expectedAnytime": "ATTENDU À TOUT MOMENT (RISQUE ÉLEVÉ)"
+  },
+  "heroboard.adjustment": {
+    "lastChange": "DERNIER CHANGEMENT:",
+    "effective": "EFFECTIF:",
+    "today": "AUJOURD'HUI",
+    "yesterday": "HIER",
+    "tomorrow": "DEMAIN",
+    "interrupter": "INTERRUPTEUR",
+    "nbCapSet": "PLAFOND NB DEF À",
+    "perLiter": "¢/L"
+  },
+  "heroboard.riskStatus": {
+    "currentStatus": "Statut Actuel",
+    "alert": "Volatilité critique détectée. Conditions d'interrupteur respectées.",
+    "high": "Variance élevée détectée. Risque élevé d'ajustement.",
+    "medium": "La variance du marché est actuellement modérée, surveillance continue.",
+    "low": "La variance du marché est actuellement faible. Perspectives stables."
+  },
   "common": {
     "loading": "Chargement...",
     "error": "Erreur lors du chargement des données",

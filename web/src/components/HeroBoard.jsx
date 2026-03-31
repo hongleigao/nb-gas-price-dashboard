@@ -107,7 +107,7 @@ const HeroBoard = ({ data, onExplore }) => {
   };
 
   const nextAdjDateText = risk_level === 'Alert' 
-      ? 'EXPECTED ANYTIME (HIGH RISK)' 
+      ? t('heroboard.prediction.expectedAnytime')
       : `EST. NEXT ADJ: ${getNextAdjustmentDate()}`;
 
   let lastAdjText = '';
@@ -115,7 +115,7 @@ const HeroBoard = ({ data, onExplore }) => {
       const effDateStr = current_eub.effective_date;
       const d = new Date(effDateStr + 'T12:00:00');
       let displayDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
-      let prefix = 'LAST CHANGE:';
+      let prefix = t('heroboard.adjustment.lastChange');
 
       try {
           const getMonctonDateStr = (offsetDays = 0) => {
@@ -132,12 +132,12 @@ const HeroBoard = ({ data, onExplore }) => {
           const tomorrowStr = getMonctonDateStr(1);
 
           if (effDateStr === todayStr) {
-              displayDate = 'TODAY';
+              displayDate = t('heroboard.adjustment.today');
           } else if (effDateStr === yesterdayStr) {
-              displayDate = 'YESTERDAY';
+              displayDate = t('heroboard.adjustment.yesterday');
           } else if (effDateStr === tomorrowStr) {
-              displayDate = 'TOMORROW';
-              prefix = 'EFFECTIVE:'; 
+              displayDate = t('heroboard.adjustment.tomorrow');
+              prefix = t('heroboard.adjustment.effective'); 
           }
       } catch (e) {
           // 降级显示
@@ -150,9 +150,9 @@ const HeroBoard = ({ data, onExplore }) => {
           // 架构师修复：解决 JS 浮点数精度漏洞 (IEEE 754)，强制保留最大两位小数，并清理尾部的 0
           const safeVariance = parseFloat(variance.toFixed(2));
           
-          lastAdjText = `${prefix} ${displayDate} (INTERRUPTER ${sign}${safeVariance}c)`;
+          lastAdjText = `${prefix} ${displayDate} (${t('heroboard.adjustment.interrupter')} ${sign}${safeVariance}c)`;
       } else {
-          lastAdjText = `${prefix} ${displayDate} (NB CAP SET TO ${current_eub.max_price} ¢/L)`;
+          lastAdjText = `${prefix} ${displayDate} (${t('heroboard.adjustment.nbCapSet')} ${current_eub.max_price} ${t('heroboard.adjustment.perLiter')})`;
       }
   }
 
@@ -160,51 +160,50 @@ const HeroBoard = ({ data, onExplore }) => {
   // 4. 智能决策引擎 (Smart Recommendation - 4 Tiers)
   // ==========================================
   let recTheme = 'neutral'; 
-  let recTitle = 'Buy As Needed';
-  let recSubtitle = 'Prices are relatively stable. No major routine or emergency shifts expected.';
-  let recIcon = 'local_gas_station';
+  let recTitle = t('heroboard.recommendations.neutral.title');
+  let recSubtitle = t('heroboard.recommendations.neutral.subtitle');
+  let recIcon = t('heroboard.recommendations.neutral.icon');
 
-  // 架构师新增：最高优先级的“空窗期” UI 状态，优雅化解没有数据的尴尬
   if (isTwilightZone) {
       recTheme = 'neutral';
-      recTitle = 'Awaiting Market Data';
-      recSubtitle = 'A new pricing cycle has begun. Waiting for the first market close...';
-      recIcon = 'hourglass_empty';
+      recTitle = t('heroboard.recommendations.twilightZone.title');
+      recSubtitle = t('heroboard.recommendations.twilightZone.subtitle');
+      recIcon = t('heroboard.recommendations.twilightZone.icon');
   }
   // Tier 1: 极度危险 (Alert)
   else if (risk_level === 'Alert') {
       recTheme = 'alert';
-      recIcon = 'warning';
+      recIcon = t('heroboard.recommendations.alert.icon');
       if (isFalling) {
-          recTitle = 'Wait to Fill';
-          recSubtitle = 'Critical volatility. An emergency price drop is expected ANYTIME.';
+          recTitle = t('heroboard.recommendations.alert.falling.title');
+          recSubtitle = t('heroboard.recommendations.alert.falling.subtitle');
       } else {
-          recTitle = 'Fill Up Immediately';
-          recSubtitle = 'Critical volatility. An emergency price hike is expected ANYTIME.';
+          recTitle = t('heroboard.recommendations.alert.rising.title');
+          recSubtitle = t('heroboard.recommendations.alert.rising.subtitle');
       }
   } 
   // Tier 2: 高危险，可能提前熔断 (High)
   else if (risk_level === 'High') {
       recTheme = isFalling ? 'wait' : 'buy';
-      recIcon = isFalling ? 'trending_down' : 'trending_up';
+      recIcon = isFalling ? t('heroboard.recommendations.high.icon_falling') : t('heroboard.recommendations.high.icon_rising');
       if (isFalling) {
-          recTitle = 'Hold Off';
-          recSubtitle = 'High risk of an unscheduled price drop. Avoid filling up if possible.';
+          recTitle = t('heroboard.recommendations.high.falling.title');
+          recSubtitle = t('heroboard.recommendations.high.falling.subtitle');
       } else {
-          recTitle = 'Fill Up Very Soon';
-          recSubtitle = 'High risk of an unscheduled price hike. Do not wait until Friday.';
+          recTitle = t('heroboard.recommendations.high.rising.title');
+          recSubtitle = t('heroboard.recommendations.high.rising.subtitle');
       }
   } 
   // Tier 3: 周五例行调价较大 (>= 3.0c)
   else if (Math.abs(predicted_change_postTax) >= 3.0) {
       recTheme = isFalling ? 'wait' : 'buy';
-      recIcon = isFalling ? 'trending_down' : 'trending_up';
+      recIcon = isFalling ? t('heroboard.recommendations.tier3.icon_falling') : t('heroboard.recommendations.tier3.icon_rising');
       if (isFalling) {
-          recTitle = 'Wait for Friday';
-          recSubtitle = `Market costs are down. Expecting a ~${formattedChange}c routine drop on Friday.`;
+          recTitle = t('heroboard.recommendations.tier3.falling.title');
+          recSubtitle = t('heroboard.recommendations.tier3.falling.subtitle', { change: formattedChange });
       } else {
-          recTitle = 'Fill Up Before Friday';
-          recSubtitle = `Market costs are up. Expecting a ~${formattedChange}c routine increase on Friday.`;
+          recTitle = t('heroboard.recommendations.tier3.rising.title');
+          recSubtitle = t('heroboard.recommendations.tier3.rising.subtitle', { change: formattedChange });
       }
   }
 
@@ -247,19 +246,19 @@ const HeroBoard = ({ data, onExplore }) => {
             <div>
               {/* 动态显示的下一个生效时间 */}
               <span className={`font-label text-[11px] font-semibold uppercase tracking-widest mb-2 block ${risk_level === 'Alert' ? 'text-orange-300' : 'text-slate-300'}`}>
-                {nextAdjDateText}
+                {risk_level === 'Alert' ? t('heroboard.prediction.expectedAnytime') : `EST. NEXT ADJ: ${getNextAdjustmentDate()}`}
               </span>
               <h1 className="font-headline font-extrabold text-4xl text-white tracking-tight">
                 {isFalling ? '-' : '+'}{formattedChange}c
               </h1>
-              <span className="text-white/80 text-xs font-medium mt-1 block">≈ retail impact incl. HST</span>
+              <span className="text-white/80 text-xs font-medium mt-1 block">{t('heroboard.prediction.retailImpact')}</span>
             </div>
             <div className={`backdrop-blur-md rounded-full px-4 py-1.5 flex items-center gap-2 border ${isFalling ? 'bg-emerald-500/20 border-emerald-500/30' : 'bg-rose-500/20 border-rose-500/30'}`}>
               <span className={`material-symbols-outlined text-sm ${isFalling ? 'text-emerald-300' : 'text-rose-300'}`} style={{ fontVariationSettings: "'FILL' 1" }}>
                 {isFalling ? 'trending_down' : 'trending_up'}
               </span>
               <span className={`font-label font-bold text-xs uppercase tracking-wider ${isFalling ? 'text-emerald-300' : 'text-rose-300'}`}>
-                {isFalling ? 'FALLING' : 'RISING'}
+                {isFalling ? t('heroboard.prediction.falling') : t('heroboard.prediction.rising')}
               </span>
             </div>
           </div>
@@ -290,7 +289,7 @@ const HeroBoard = ({ data, onExplore }) => {
           <span className="font-label text-xs font-semibold uppercase tracking-wider text-on-surface-variant block mb-6">{t('heroboard.riskLevel')}</span>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="font-label text-sm font-bold text-on-surface">Current Status</span>
+              <span className="font-label text-sm font-bold text-on-surface">{t('heroboard.riskStatus.currentStatus')}</span>
               <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide
                 ${risk_level === 'Alert' ? 'bg-rose-600 text-white' : 
                   risk_level === 'High' ? 'bg-orange-500 text-white' : 
@@ -308,10 +307,10 @@ const HeroBoard = ({ data, onExplore }) => {
               <div className={`flex-1 rounded-full ${risk_level === 'Alert' ? 'bg-rose-600' : 'bg-slate-100'}`}></div>
             </div>
             <p className="text-xs text-on-surface-variant leading-relaxed mt-4">
-              {risk_level === 'Alert' ? 'Critical volatility detected. Interrupter conditions met.' :
-               risk_level === 'High' ? 'High variance detected. Elevated risk of adjustment.' :
-               risk_level === 'Medium' ? 'Market variance is currently within the moderate range, monitoring closely.' :
-               'Market variance is currently low. Stable outlook.'}
+              {risk_level === 'Alert' ? t('heroboard.riskStatus.alert') :
+               risk_level === 'High' ? t('heroboard.riskStatus.high') :
+               risk_level === 'Medium' ? t('heroboard.riskStatus.medium') :
+               t('heroboard.riskStatus.low')}
             </p>
           </div>
         </div>
