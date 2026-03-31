@@ -1,6 +1,8 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next'; // ✅ 添加多语言支持
 
 const HeroBoard = ({ data, onExplore }) => {
+  const { t } = useTranslation(); // ✅ 获取翻译函数
   const payload = data?.data;
   
   // ==========================================
@@ -11,16 +13,16 @@ const HeroBoard = ({ data, onExplore }) => {
       <div className="flex flex-col items-center justify-center py-20 px-6 text-center space-y-6 bg-surface-container-lowest rounded-3xl border border-dashed border-outline-variant/30">
         <span className="text-7xl drop-shadow-sm grayscale opacity-80">⛽</span>
         <div className="space-y-2">
-          <h3 className="text-xl font-headline font-extrabold text-primary tracking-tight">Out of Gas!</h3>
+          <h3 className="text-xl font-headline font-extrabold text-primary tracking-tight">{t('common.error')}</h3>
           <p className="text-on-surface-variant text-sm font-medium">
-            Our data pipeline is temporarily out of gas...
+            {t('heroboard.currentPrice')}...
           </p>
         </div>
         <p className="text-xs text-outline leading-relaxed max-w-xs">
-          We are currently fetching the latest prices from the market source.<br/>Please refresh the page in a moment.
+          {t('common.loading')}<br/>{t('common.retry')}
         </p>
         <button onClick={() => window.location.reload()} className="mt-4 px-6 py-2 bg-secondary/10 text-secondary font-bold rounded-full text-sm hover:bg-secondary/20 transition-colors">
-          Retry
+          {t('common.retry')}
         </button>
       </div>
     );
@@ -272,7 +274,7 @@ const HeroBoard = ({ data, onExplore }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-surface-container-lowest p-6 rounded-3xl flex flex-col justify-between border border-outline-variant/10 shadow-sm">
           <div>
-            <span className="font-label text-xs font-semibold uppercase tracking-wider text-on-surface-variant block mb-4">Current Pump Price (Est.)</span>
+            <span className="font-label text-xs font-semibold uppercase tracking-wider text-on-surface-variant block mb-4">{t('heroboard.currentPrice')}</span>
             <div className="flex items-baseline gap-2">
               <span className="font-headline font-bold text-5xl text-primary">{pump_estimated}</span>
               <span className="font-headline font-bold text-xl text-on-surface-variant">c/L</span>
@@ -280,12 +282,12 @@ const HeroBoard = ({ data, onExplore }) => {
           </div>
           <div className="mt-8 flex items-center gap-2 text-secondary font-semibold text-sm">
             <span className="material-symbols-outlined text-lg">verified</span>
-            <span>Live Market Sync</span>
+            <span>{t('heroboard.stable')}</span>
           </div>
         </div>
 
         <div className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/10 shadow-sm">
-          <span className="font-label text-xs font-semibold uppercase tracking-wider text-on-surface-variant block mb-6">Interrupter Risk Level</span>
+          <span className="font-label text-xs font-semibold uppercase tracking-wider text-on-surface-variant block mb-6">{t('heroboard.riskLevel')}</span>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="font-label text-sm font-bold text-on-surface">Current Status</span>
@@ -318,7 +320,7 @@ const HeroBoard = ({ data, onExplore }) => {
       <button onClick={onExplore} className="w-full bg-primary py-5 rounded-2xl group active:scale-[0.98] transition-all duration-200 shadow-xl shadow-primary/10 overflow-hidden relative">
         <div className="absolute inset-0 bg-white/0 group-hover:bg-white/5 transition-colors"></div>
         <div className="flex items-center justify-center gap-3 relative z-10">
-          <span className="text-white font-manrope font-bold text-lg">Explore Math Model</span>
+          <span className="text-white font-manrope font-bold text-lg">{t('cycledetails.title')}</span>
           <span className="material-symbols-outlined text-white group-hover:translate-x-1 transition-transform">arrow_forward</span>
         </div>
       </button>

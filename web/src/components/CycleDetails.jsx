@@ -1,6 +1,8 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next'; // ✅ 添加多语言支持
 
 const CycleDetails = ({ onBack, data }) => {
+  const { t } = useTranslation(); // ✅ 获取翻译函数
   const payload = data?.data;
 
   // ==========================================

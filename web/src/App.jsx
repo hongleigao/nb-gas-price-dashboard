@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next'; // ✅ 添加 i18n hook
 import HeroBoard from './components/HeroBoard';
 import CycleDetails from './components/CycleDetails';
 import HistoryChart from './components/HistoryChart';
+import { LanguageSwitcher } from './components/LanguageSwitcher'; // ✅ 导入语言切换器
 
 function App() {
+  const { t } = useTranslation(); // ✅ 获取翻译函数
   const [activeTab, setActiveTab] = useState('market'); // 'market', 'trends'
   const [showCycleDetails, setShowCycleDetails] = useState(false);
   const [data, setData] = useState(null);
@@ -64,6 +67,9 @@ function App() {
           <span className="text-blue-900 font-manrope font-extrabold tracking-tight text-xl">NB Gas Guru</span>
         </div>
         <div className="flex items-center gap-2">
+          {/* ✅ 语言切换器 */}
+          <LanguageSwitcher />
+          
           {/* 替换原有的无用通知/账号图标为实用的 Share 按钮 */}
           <button
             onClick={handleShare}

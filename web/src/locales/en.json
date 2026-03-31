@@ -1,0 +1,55 @@
+{
+  "nav": {
+    "title": "NB Gas Price Dashboard",
+    "selectLanguage": "Select Language"
+  },
+  "heroboard": {
+    "currentPrice": "Current Predicted Price",
+    "lastUpdated": "Last Updated",
+    "marketCycle": "Market Cycle",
+    "riskLevel": "Risk Level",
+    "sevenDayAverage": "7-Day Average",
+    "priceTrend": "Price Trend",
+    "stable": "Stable",
+    "risingTrend": "Rising Trend",
+    "fallingTrend": "Falling Trend",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High"
+  },
+  "cycledetails": {
+    "title": "Market Cycle Details",
+    "cyclePhase": "Cycle Phase",
+    "daysInCycle": "Days in Cycle",
+    "expectedDuration": "Expected Duration",
+    "phase1": "Accumulation",
+    "phase2": "Rising Phase",
+    "phase3": "Peak",
+    "phase4": "Declining Phase",
+    "days": "days"
+  },
+  "historychart": {
+    "title": "Historical Price Trends",
+    "averagePrice": "Average Price",
+    "priceRange": "Price Range",
+    "minPrice": "Min",
+    "maxPrice": "Max",
+    "date": "Date",
+    "price": "Price",
+    "tooltip": "Price: {{price}}¢ on {{date}}"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error loading data",
+    "retry": "Retry",
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel",
+    "settings": "Settings",
+    "about": "About",
+    "contact": "Contact",
+    "language": "Language",
+    "darkMode": "Dark Mode",
+    "lastUpdateTime": "Last Updated: {{time}}"
+  }
+}

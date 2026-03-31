@@ -1,0 +1,55 @@
+{
+  "nav": {
+    "title": "Tableau de Bord des Prix de l'Essence NB",
+    "selectLanguage": "Sélectionner la Langue"
+  },
+  "heroboard": {
+    "currentPrice": "Prix Prédit Actuel",
+    "lastUpdated": "Dernière Mise à Jour",
+    "marketCycle": "Cycle du Marché",
+    "riskLevel": "Niveau de Risque",
+    "sevenDayAverage": "Moyenne 7 Jours",
+    "priceTrend": "Tendance de Prix",
+    "stable": "Stable",
+    "risingTrend": "Tendance Haussière",
+    "fallingTrend": "Tendance Baissière",
+    "low": "Bas",
+    "medium": "Moyen",
+    "high": "Élevé"
+  },
+  "cycledetails": {
+    "title": "Détails du Cycle du Marché",
+    "cyclePhase": "Phase du Cycle",
+    "daysInCycle": "Jours dans le Cycle",
+    "expectedDuration": "Durée Prévue",
+    "phase1": "Accumulation",
+    "phase2": "Phase de Hausse",
+    "phase3": "Pic",
+    "phase4": "Phase de Baisse",
+    "days": "jours"
+  },
+  "historychart": {
+    "title": "Tendances Historiques des Prix",
+    "averagePrice": "Prix Moyen",
+    "priceRange": "Gamme de Prix",
+    "minPrice": "Min",
+    "maxPrice": "Max",
+    "date": "Date",
+    "price": "Prix",
+    "tooltip": "Prix: {{price}}¢ le {{date}}"
+  },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur lors du chargement des données",
+    "retry": "Réessayer",
+    "close": "Fermer",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "settings": "Paramètres",
+    "about": "À Propos",
+    "contact": "Contact",
+    "language": "Langue",
+    "darkMode": "Mode Sombre",
+    "lastUpdateTime": "Dernière Mise à Jour: {{time}}"
+  }
+}

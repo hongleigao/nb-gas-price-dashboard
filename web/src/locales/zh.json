@@ -1,0 +1,55 @@
+{
+  "nav": {
+    "title": "新不伦瑞克油价仪表盘",
+    "selectLanguage": "选择语言"
+  },
+  "heroboard": {
+    "currentPrice": "当前预测油价",
+    "lastUpdated": "最后更新",
+    "marketCycle": "市场周期",
+    "riskLevel": "风险等级",
+    "sevenDayAverage": "7日平均价格",
+    "priceTrend": "价格趋势",
+    "stable": "稳定",
+    "risingTrend": "上升趋势",
+    "fallingTrend": "下降趋势",
+    "low": "低",
+    "medium": "中等",
+    "high": "高"
+  },
+  "cycledetails": {
+    "title": "市场周期详情",
+    "cyclePhase": "周期阶段",
+    "daysInCycle": "周期天数",
+    "expectedDuration": "预期持续时间",
+    "phase1": "积累阶段",
+    "phase2": "上升阶段",
+    "phase3": "顶峰",
+    "phase4": "下降阶段",
+    "days": "天"
+  },
+  "historychart": {
+    "title": "历史油价趋势",
+    "averagePrice": "平均价格",
+    "priceRange": "价格范围",
+    "minPrice": "最低",
+    "maxPrice": "最高",
+    "date": "日期",
+    "price": "价格",
+    "tooltip": "油价: {{price}}¢ ({{date}})"
+  },
+  "common": {
+    "loading": "加载中...",
+    "error": "数据加载出错",
+    "retry": "重试",
+    "close": "关闭",
+    "save": "保存",
+    "cancel": "取消",
+    "settings": "设置",
+    "about": "关于",
+    "contact": "联系",
+    "language": "语言",
+    "darkMode": "深色模式",
+    "lastUpdateTime": "最后更新: {{time}}"
+  }
+}

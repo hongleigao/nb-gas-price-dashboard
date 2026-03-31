@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>i18n Design Concepts</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f8f9fa; padding: 40px; max-width: 1200px; margin: 0 auto; }
+    h1 { color: #00236f; }
+    .section { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; }
+    .demo { padding: 20px; background: #f3f4f5; border-radius: 8px; margin: 20px 0; }
+    button { padding: 10px 20px; margin: 5px; border-radius: 6px; border: 1px solid #ccc; cursor: pointer; }
+    button.active { background: #1e3a8a; color: white; }
+    .preview { display: none; }
+    .preview.active { display: block; }
+  </style>
+</head>
+<body>
+  <h1>🌍 i18n 多语言设计方案</h1>
+  
+  <div class="section">
+    <h2>🎬 设计方案演示</h2>
+    
+    <h3>方案 A: 旗帜图标</h3>
+    <div class="demo">
+      <button onclick="lang('en-a')">🇬🇧</button>
+      <button onclick="lang('fr-a')">🇫🇷</button>
+      <button onclick="lang('zh-a')">🇨🇳</button>
+    </div>
+    
+    <h3>方案 B: 下拉菜单</h3>
+    <div class="demo">
+      <select onchange="console.log(this.value)">
+        <option>🇬🇧 English</option>
+        <option>🇫🇷 Français</option>
+        <option>🇨🇳 中文</option>
+      </select>
+    </div>
+    
+    <h3>方案 C: 标签页</h3>
+    <div class="demo">
+      <button class="active" onclick="switchLang('en')">English</button>
+      <button onclick="switchLang('fr')">Français</button>
+      <button onclick="switchLang('zh')">中文</button>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2>📊 仪表盘预览</h2>
+    
+    <div id="en" class="preview active">
+      <h3>🇬🇧 English Dashboard</h3>
+      <p><strong>Current Price:</strong> 147.9¢</p>
+      <p><strong>Change:</strong> ↓ 2.3¢ by Thursday</p>
+    </div>
+    
+    <div id="fr" class="preview">
+      <h3>🇫🇷 Tableau de Bord Français</h3>
+      <p><strong>Prix Actuel:</strong> 147.9¢</p>
+      <p><strong>Changement:</strong> ↓ 2.3¢ d'ici jeudi</p>
+    </div>
+    
+    <div id="zh" class="preview">
+      <h3>🇨🇳 中文仪表盘</h3>
+      <p><strong>当前油价:</strong> 147.9¢</p>
+      <p><strong>价格变化:</strong> ↓ 2.3¢ 周四前</p>
+    </div>
+  </div>
+  
+  <script>
+    function switchLang(lang) {
+      document.querySelectorAll('.preview').forEach(p => p.classList.remove('active'));
+      document.getElementById(lang).classList.add('active');
+      document.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next'; // ✅ 添加多语言支持
 import * as echarts from 'echarts';
 
 const generateDateRange = (startDateStr, endDateStr) => {
@@ -17,6 +18,7 @@ const generateDateRange = (startDateStr, endDateStr) => {
 };
 
 const HistoryChart = () => {
+  const { t } = useTranslation(); // ✅ 获取翻译函数
   const chartRef = useRef(null);
   const [data, setData] = useState(null);
   const [days, setDays] = useState(30); 

@@ -1,0 +1,134 @@
+/* ============ 语言切换器样式 ============ */
+
+.language-switcher {
+  position: relative;
+  display: inline-block;
+}
+
+.lang-selector-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid var(--color-border, #c5c5d3);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  color: var(--color-on-surface, #191c1d);
+}
+
+.lang-selector-btn:hover {
+  background: var(--color-surface-hover, #f8f9fa);
+  border-color: var(--color-primary, #00236f);
+}
+
+.lang-selector-btn:active {
+  background: var(--color-primary, #00236f);
+  color: white;
+}
+
+.lang-flag {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.lang-name {
+  flex-shrink: 0;
+}
+
+.chevron {
+  font-size: 0.7rem;
+  transition: transform 0.3s ease;
+  margin-left: 4px;
+}
+
+.chevron.open {
+  transform: rotate(180deg);
+}
+
+/* ============ 下拉菜单 ============ */
+
+.lang-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid var(--color-border, #e1e3e4);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 160px;
+  overflow: hidden;
+}
+
+.lang-option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.2s;
+  gap: 12px;
+  color: var(--color-on-surface, #191c1d);
+}
+
+.lang-option:hover {
+  background: var(--color-surface-hover, #f3f4f5);
+}
+
+.lang-option.active {
+  background: var(--color-primary-light, #dce1ff);
+  color: var(--color-primary, #00236f);
+  font-weight: 600;
+}
+
+.lang-option:not(:last-child) {
+  border-bottom: 1px solid var(--color-divider, #f3f4f5);
+}
+
+.checkmark {
+  margin-left: auto;
+  color: var(--color-primary, #00236f);
+  font-weight: bold;
+}
+
+/* ============ 移动端优化 ============ */
+
+@media (max-width: 480px) {
+  .lang-selector-btn {
+    padding: 8px;
+  }
+
+  .lang-selector-btn .lang-name {
+    display: none; /* 隐藏文字节省空间 */
+  }
+
+  .lang-flag {
+    font-size: 1.3rem;
+  }
+
+  .lang-dropdown {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100vw - 32px);
+    max-width: 300px;
+  }
+
+  .lang-option {
+    padding: 16px 12px; /* 增加点击区域 */
+    min-height: 48px; /* Material Design 标准 */
+    justify-content: center;
+  }
+
+  .lang-option:not(:last-child) {
+    border-bottom: none;
+  }
+}
