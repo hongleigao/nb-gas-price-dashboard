@@ -15,9 +15,9 @@ export const LanguageSwitcher = () => {
   };
 
   const languages = [
-    { code: 'en', name: 'English', shortCode: 'EN', flag: '🇬🇧' },
-    { code: 'fr', name: 'Français', shortCode: 'FR', flag: '🇫🇷' },
-    { code: 'zh', name: '中文', shortCode: 'CN', flag: '🇨🇳' }
+    { code: 'en', name: 'English', shortCode: 'EN' },
+    { code: 'fr', name: 'Français', shortCode: 'FR' },
+    { code: 'zh', name: '中文', shortCode: 'CN' }
   ];
 
   useEffect(() => {
@@ -55,7 +55,6 @@ export const LanguageSwitcher = () => {
               className={`lang-option ${currentLang === lang.code ? 'active' : ''}`}
               onClick={() => handleLanguageChange(lang.code)}
             >
-              <span className="lang-flag">{lang.flag}</span>
               <span className="lang-code">{lang.shortCode}</span>
               <span className="lang-name-full">{lang.name}</span>
               {currentLang === lang.code && <span className="checkmark">✓</span>}
