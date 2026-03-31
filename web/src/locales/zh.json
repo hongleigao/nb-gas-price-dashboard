@@ -66,7 +66,7 @@
     "prediction": {
       "retailImpact": "预估含税零售价",
       "falling": "下跌",
-      "rising": "上升",
+      "rising": "上涨",
       "expectedAnytime": "预计随时调整（高风险）",
       "estimatedNextAdj": "预计下次调整"
     },
@@ -77,7 +77,7 @@
       "yesterday": "昨天",
       "tomorrow": "明天",
       "interrupter": "熔断导致调整",
-      "nbCapSet": "NB最高限价设定为",
+      "nbCapSet": "NB最高限价为",
       "perLiter": "¢/L"
     },
     "riskStatus": {
@@ -100,7 +100,7 @@
     "days": "天",
     "emptyState": {
       "title": "周期分析",
-      "subtitle": "我们的数据管道暂时出错了...",
+      "subtitle": "我们的油价数据管道暂时出错了...",
       "instruction": "请返回重试。"
     },
     "header": {
@@ -127,13 +127,13 @@
     }
   },
   "historychart": {
-    "title": "精致趋势",
-    "liveData": "实时市场数据",
+    "title": "油价趋势",
+    "liveData": "最新市场数据",
     "subtitle30Day": "30天波动性快照",
     "subtitle90Day": "90天分歧分析",
     "subtitle365Day": "1年宏观趋势分析",
-    "eubRetailPrice": "新不伦瑞克零售价 (含税)",
-    "nymexBaseCost": "NYMEX基础成本 (不含税)",
+    "eubRetailPrice": "NB油价限价（含税）",
+    "nymexBaseCost": "国际油价成本(不含税)",
     "postTaxUnit": "¢/L (含税)",
     "preTaxUnit": "¢/L (不含税)",
     "tab30d": "30天",

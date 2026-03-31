@@ -246,7 +246,7 @@ const HeroBoard = ({ data, onExplore }) => {
             <div>
               {/* 动态显示的下一个生效时间 */}
               <span className={`font-label text-[11px] font-semibold uppercase tracking-widest mb-2 block ${risk_level === 'Alert' ? 'text-orange-300' : 'text-slate-300'}`}>
-                {risk_level === 'Alert' ? t('heroboard.prediction.expectedAnytime') : `EST. NEXT ADJ: ${getNextAdjustmentDate()}`}
+                {nextAdjDateText}
               </span>
               <h1 className="font-headline font-extrabold text-4xl text-white tracking-tight">
                 {isFalling ? '-' : '+'}{formattedChange}c
