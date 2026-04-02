@@ -71,7 +71,7 @@ const HeroBoard = ({ data, onExplore }) => {
       return new Intl.DateTimeFormat('en-US', { timeZone: 'America/Moncton', weekday: 'short' }).format(new Date());
   };
   const currentWeekday = getMonctonWeekday();
-  const isSilentPeriod = currentWeekday === 'Tue' || currentWeekday === 'Wed';
+  const isSilentPeriod = currentWeekday === 'Tue' || currentWeekday === 'Wed' || currentWeekday === 'Thu';
 
   // 风险定级逻辑
   let risk_level = 'Low';
