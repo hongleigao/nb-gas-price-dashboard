@@ -71,20 +71,31 @@ const HeroBoard = ({ data, onExplore }) => {
       return new Intl.DateTimeFormat('en-US', { timeZone: 'America/Moncton', weekday: 'short' }).format(new Date());
   };
   const currentWeekday = getMonctonWeekday();
-  const isSilentPeriod = currentWeekday === 'Tue' || currentWeekday === 'Wed' || currentWeekday === 'Thu';
+  
+  // 星期四是不可动摇的最终结算日（绝对静默）
+  const isAbsoluteSilentDay = currentWeekday === 'Thu';
+  // 星期二、星期三是常规静默期
+  const isRegularSilentDay = currentWeekday === 'Tue' || currentWeekday === 'Wed';
+  const isSilentPeriod = isAbsoluteSilentDay || isRegularSilentDay;
+
+  // 终极安全阀：黑天鹅事件 (税前波动 >= 12.0c)。防止在周二/周三遇到史诗级暴涨暴跌时系统装死。
+  const isBlackSwanEvent = latest_daily_variance_preTax >= 12.0;
 
   // 风险定级逻辑
   let risk_level = 'Low';
   const current_risk_variance_preTax = Math.abs(predicted_change_preTax);
   
-  // 架构师重构：结合数学阈值与法定静默期进行风险定级
+  // 架构师重构：结合数学阈值、法定静默期与“黑天鹅”击穿机制进行风险定级
   if (isTwilightZone) {
       risk_level = 'Low';
-  } else if ((current_risk_variance_preTax >= 5.0 || latest_daily_variance_preTax >= 6.0) && !isSilentPeriod) {
-      // 只有在非静默期，且突破死线时，才触发红色 Alert
+  } else if (
+      (current_risk_variance_preTax >= 5.0 || latest_daily_variance_preTax >= 6.0) && 
+      (!isSilentPeriod || (isRegularSilentDay && isBlackSwanEvent))
+  ) {
+      // 触发条件：非静默期破线，或者在周二/周三遇到 >= 12.0c 的史诗级波动强行击穿静默期！
       risk_level = 'Alert';
   } else if (current_risk_variance_preTax >= 4.0 || latest_daily_variance_preTax >= 4.5) {
-      // 如果单日波动高达 4.5~5.9 (例如这次的 5.37)，或者处于静默期的暴涨，降级为 High 或 Medium
+      // 如果单日波动高达 4.5~5.9，或者处于静默期的暴涨，降级为 High 或 Medium
       risk_level = isSilentPeriod ? 'Medium' : 'High'; 
   } else if (current_risk_variance_preTax >= 3.0 || latest_daily_variance_preTax >= 3.5) {
       risk_level = 'Medium';
